@@ -1,0 +1,43 @@
+name: vinu
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Audio stack
+  just_audio: ^0.10.5
+  audio_service: ^0.18.18
+  audio_session: ^0.2.2
+
+  # Permissions + storage
+  permission_handler: ^12.0.1
+  path_provider: ^2.1.5
+
+  # Local music scanner
+  on_audio_query: ^2.9.0
+
+  # State management
+  provider: ^6.1.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+# 🔥 IMPORTANT — override the broken Android plugin from pub.dev
+# This makes Flutter use your local patched plugin instead of the buggy pub.dev copy.
+dependency_overrides:
+  on_audio_query_android:
+    path: local_plugins/on_audio_query_android
