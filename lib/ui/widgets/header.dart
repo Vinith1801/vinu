@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../screens/search_screen.dart';
+import '../screens/settings_screen.dart';
 
 class Header extends StatelessWidget {
   const Header({super.key});
@@ -6,27 +8,41 @@ class Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          Expanded(
-            child: Container(
-              height: 45,
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const TextField(
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "Search…",
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                ),
-              ),
+          // APP TITLE
+          const Text(
+            "Vinu",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 12),
-          const Icon(Icons.settings, size: 28),
+
+          const Spacer(),
+
+          // SEARCH ICON
+          IconButton(
+            icon: const Icon(Icons.search, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SearchScreen()),
+              );
+            },
+          ),
+
+          // SETTINGS ICON
+          IconButton(
+            icon: const Icon(Icons.settings, size: 28),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
         ],
       ),
     );

@@ -11,28 +11,10 @@ class MiniPlayer extends StatefulWidget {
   State<MiniPlayer> createState() => _MiniPlayerState();
 }
 
-class _MiniPlayerState extends State<MiniPlayer>
-    with SingleTickerProviderStateMixin {
+class _MiniPlayerState extends State<MiniPlayer> {
   double collapsedHeight = 70;
   double expandedHeight = 0;
   double currentHeight = 70;
-
-  late AnimationController rotateController;
-
-  @override
-  void initState() {
-    super.initState();
-    rotateController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 12),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    rotateController.dispose();
-    super.dispose();
-  }
 
   @override
   void didChangeDependencies() {
@@ -45,9 +27,6 @@ class _MiniPlayerState extends State<MiniPlayer>
     final c = Provider.of<AudioPlayerController>(context);
 
     if (c.currentSong == null) return const SizedBox.shrink();
-
-    // pause / continue rotation
-    c.isPlaying ? rotateController.repeat() : rotateController.stop();
 
     return GestureDetector(
       onVerticalDragUpdate: (details) {
@@ -78,15 +57,15 @@ class _MiniPlayerState extends State<MiniPlayer>
     );
   }
 
-  // --------------------------------------------------
-  // 🔹 MINI PLAYER
-  // --------------------------------------------------
+  // -------------------------
+  // MINI PLAYER
+  // -------------------------
   Widget _miniPlayer(AudioPlayerController c) {
     return Row(
       children: [
         const SizedBox(width: 8),
 
-        // Mini Artwork
+        // Small album art
         ClipRRect(
           borderRadius: BorderRadius.circular(6),
           child: QueryArtworkWidget(
@@ -98,8 +77,8 @@ class _MiniPlayerState extends State<MiniPlayer>
               color: Colors.grey.shade300,
               child: const Icon(Icons.music_note),
             ),
-            artworkHeight: 50,
             artworkWidth: 50,
+            artworkHeight: 50,
           ),
         ),
 
@@ -110,7 +89,6 @@ class _MiniPlayerState extends State<MiniPlayer>
             c.currentSong!.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 16),
           ),
         ),
 
@@ -118,80 +96,69 @@ class _MiniPlayerState extends State<MiniPlayer>
           icon: Icon(c.isPlaying ? Icons.pause : Icons.play_arrow),
           onPressed: c.togglePlayPause,
         ),
-        const SizedBox(width: 8),
       ],
     );
   }
 
-  // --------------------------------------------------
-  // 🔥 FULL PLAYER WITH ROTATING CIRCLE
-  // --------------------------------------------------
+  // -------------------------
+  // FULL PLAYER (STATIC ARTWORK)
+  // -------------------------
   Widget _fullPlayer(AudioPlayerController c) {
     return StreamBuilder<Duration?>(
       stream: c.durationStream,
-      builder: (_, snapDur) {
+      builder: (context, snapDur) {
         final duration = snapDur.data ?? Duration.zero;
 
         return StreamBuilder<Duration>(
           stream: c.positionStream,
-          builder: (_, snapPos) {
+          builder: (context, snapPos) {
             final position = snapPos.data ?? Duration.zero;
 
             return Column(
               children: [
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 const Icon(Icons.drag_handle),
 
                 const SizedBox(height: 20),
 
-                // 🎵 ROTATING ARTWORK
-                RotationTransition(
-                  turns: rotateController,
-                  child: ClipOval(
-                    child: QueryArtworkWidget(
-                      id: c.currentSong!.id,
-                      type: ArtworkType.AUDIO,
-                      artworkHeight: 180,
-                      artworkWidth: 180,
-                      nullArtworkWidget: Container(
-                        width: 180,
-                        height: 180,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.black12,
-                        ),
-                        child: const Icon(Icons.music_note, size: 80),
+                // STATIC CIRCULAR ALBUM ART — NO ROTATION
+                ClipOval(
+                  child: QueryArtworkWidget(
+                    id: c.currentSong!.id,
+                    type: ArtworkType.AUDIO,
+                    artworkHeight: 180,
+                    artworkWidth: 180,
+                    nullArtworkWidget: Container(
+                      width: 180,
+                      height: 180,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.black12,
                       ),
+                      child: const Icon(Icons.music_note, size: 80),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // Song Title
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Text(
-                    c.currentSong!.title,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                Text(
+                  c.currentSong!.title,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
                 ),
 
                 const SizedBox(height: 6),
 
                 Text(
                   c.currentSong!.artist ?? "Unknown Artist",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey),
                 ),
 
                 const SizedBox(height: 20),
 
-                // SEEK BAR
+                // Seekbar
                 SeekBar(
                   position: position,
                   duration: duration,
@@ -200,7 +167,7 @@ class _MiniPlayerState extends State<MiniPlayer>
 
                 const SizedBox(height: 20),
 
-                // CONTROLS
+                // Playback controls
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
