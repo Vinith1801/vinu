@@ -39,56 +39,99 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   Widget build(BuildContext context) {
     final controller = Provider.of<AudioPlayerController>(context);
 
+    final folderName = widget.folderPath.split("/").last;
+
     return Scaffold(
+      backgroundColor: Colors.grey.shade100,
+
       appBar: AppBar(
-        title: Text(widget.folderPath.split("/").last),
-        backgroundColor: Colors.white,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
-        elevation: 1,
+        title: Text(
+          folderName,
+          style: const TextStyle(fontSize: 20),
+        ),
       ),
 
       body: folderSongs.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // PLAY ALL BUTTON
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                const SizedBox(height: 10),
+
+                // PLAY ALL BUTTON - PREMIUM STYLE
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    icon: const Icon(Icons.play_circle_fill, size: 28),
-                    label: const Text(
-                      "Play All",
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        minimumSize: const Size.fromHeight(55),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                      label: const Text(
+                        "Play All",
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      onPressed: () {
+                        controller.setPlaylist(folderSongs);
+                        controller.playSong(folderSongs.first);
+                      },
                     ),
-                    onPressed: () {
-                      controller.setPlaylist(folderSongs);
-                      controller.playSong(folderSongs.first);
-                    },
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 16),
 
-                // SONG LIST
+                // SONG LIST WITH PREMIUM CARD LOOK
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView.separated(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     itemCount: folderSongs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (_, i) {
                       final s = folderSongs[i];
-                      return TrackTile(
-                        title: s.title,
-                        artist: s.artist ?? "Unknown Artist",
-                        songId: s.id,
-                        onTap: () {
-                          controller.setPlaylist(folderSongs);
-                          controller.playSong(s);
-                        },
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: TrackTile(
+                          title: s.title,
+                          artist: s.artist ?? "Unknown Artist",
+                          songId: s.id,
+                          onTap: () {
+                            controller.setPlaylist(folderSongs);
+                            controller.playSong(s);
+                          },
+                        ),
                       );
                     },
                   ),

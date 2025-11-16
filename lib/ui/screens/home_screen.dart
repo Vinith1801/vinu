@@ -5,6 +5,7 @@ import '../../player/audio_player_controller.dart';
 import '../widgets/header.dart';
 import '../widgets/track_tile.dart';
 import '../screens/folder_songs_screen.dart';
+import './../../player/favorites_controller.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -23,13 +24,12 @@ class _HomeScreenState extends State<HomeScreen>
   List<String> folders = [];
 
   bool isGridView = false;
-
   late TabController tabController;
 
   @override
   void initState() {
     super.initState();
-    tabController = TabController(length: 4, vsync: this);
+    tabController = TabController(length: 6, vsync: this);
     loadData();
   }
 
@@ -42,100 +42,107 @@ class _HomeScreenState extends State<HomeScreen>
     artists = await _audioQuery.queryArtists();
     albums = await _audioQuery.queryAlbums();
 
-    // Folder extraction
     final folderSet = <String>{};
     for (var s in songs) {
-      String path = s.data;
-      String folder = path.substring(0, path.lastIndexOf("/"));
-      folderSet.add(folder);
+      final p = s.data.substring(0, s.data.lastIndexOf("/"));
+      folderSet.add(p);
     }
     folders = folderSet.toList();
 
     if (mounted) setState(() {});
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
+    final premiumText = const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      letterSpacing: 0.2,
+    );
+
     return SafeArea(
       child: Column(
         children: [
           const Header(),
 
-          // -----------------------------------------
-          // 🔥 TAB BAR (TOP)
-          // -----------------------------------------
-          TabBar(
-            controller: tabController,
-            isScrollable: true,
-            labelColor: Colors.black,
-            unselectedLabelColor: Colors.grey,
-            labelStyle: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
+          const SizedBox(height: 4),
+
+          // PREMIUM TAB BAR
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: TabBar(
+              controller: tabController,
+              isScrollable: true,
+              labelColor: Colors.black,
+              unselectedLabelColor: Colors.grey.shade500,
+              labelStyle: premiumText,
+              indicator: UnderlineTabIndicator(
+                borderSide: BorderSide(
+                  width: 3,
+                  color: Colors.black.withOpacity(0.9),
+                ),
+                insets: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+              tabs: const [
+                Tab(text: "Songs"),
+                Tab(text: "Favorites"),
+                Tab(text: "Playlists"),
+                Tab(text: "Artists"),
+                Tab(text: "Albums"),
+                Tab(text: "Folders"),
+              ],
             ),
-            indicatorColor: Colors.black,
-            indicatorWeight: 3,
-            tabs: const [
-              Tab(text: "Songs"),
-              Tab(text: "Artists"),
-              Tab(text: "Albums"),
-              Tab(text: "Folders"),
-            ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // -----------------------------------------
-          // 🔘 LIST / GRID TOGGLE BELOW TABS
-          // -----------------------------------------
-          Padding(
+          // GRID / LIST SWITCH
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: InkWell(
-                onTap: () {
-                  setState(() => isGridView = !isGridView);
-                },
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        isGridView ? Icons.list : Icons.grid_view,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isGridView ? "List View" : "Grid View",
-                        style: const TextStyle(fontSize: 14),
-                      ),
-                    ],
+            child: Row(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => setState(() => isGridView = !isGridView),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.grey.shade200.withOpacity(0.6),
+                    ),
+                    child: Row(
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            isGridView ? Icons.list : Icons.grid_view_rounded,
+                            key: ValueKey(isGridView),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(isGridView ? "List" : "Grid",
+                            style: const TextStyle(fontSize: 14)),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // -----------------------------------------
-          // TAB VIEWS
-          // -----------------------------------------
           Expanded(
             child: TabBarView(
               controller: tabController,
               children: [
                 _songsTab(context),
+                _favoritesTab(context),
+                _playlistsTab(),
                 _artistsTab(),
                 _albumsTab(),
                 _foldersTab(context),
@@ -147,15 +154,17 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // SONGS TAB
+  // SONGS TAB (PREMIUM)
   Widget _songsTab(BuildContext context) {
     final controller = Provider.of<AudioPlayerController>(context);
 
-    if (songs.isEmpty) return const Center(child: CircularProgressIndicator());
+    if (songs.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
+    // LIST VIEW (premium spacing + softer dividers)
     if (!isGridView) {
-      // LIST VIEW
-      return ListView.builder(
+      return ListView.separated(
         itemCount: songs.length,
         itemBuilder: (_, i) {
           final s = songs[i];
@@ -169,15 +178,23 @@ class _HomeScreenState extends State<HomeScreen>
             },
           );
         },
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          thickness: 0.7,
+          color: Colors.grey.shade300,
+        ),
       );
     }
 
-    // GRID VIEW
+    // GRID VIEW (rounded artwork + premium shadows)
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       itemCount: songs.length,
       gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2,
+              childAspectRatio: .78,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14),
       itemBuilder: (_, i) {
         final s = songs[i];
         return GestureDetector(
@@ -185,30 +202,50 @@ class _HomeScreenState extends State<HomeScreen>
             controller.setPlaylist(songs);
             controller.playSong(s);
           },
-          child: Column(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: QueryArtworkWidget(
-                  id: s.id,
-                  type: ArtworkType.AUDIO,
-                  artworkHeight: 120,
-                  artworkWidth: 120,
-                  nullArtworkWidget: Container(
-                    height: 120,
-                    width: 120,
-                    color: Colors.grey.shade300,
-                    child: const Icon(Icons.music_note, size: 40),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: QueryArtworkWidget(
+                    id: s.id,
+                    type: ArtworkType.AUDIO,
+                    artworkHeight: 150,
+                    artworkWidth: double.infinity,
+                    nullArtworkWidget: Container(
+                      height: 150,
+                      color: Colors.grey.shade300,
+                      child: const Icon(Icons.music_note, size: 45),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                s.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    s.title,
+                    maxLines: 2,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                )
+              ],
+            ),
           ),
         );
       },
@@ -224,7 +261,10 @@ class _HomeScreenState extends State<HomeScreen>
       itemBuilder: (_, i) {
         final a = artists[i];
         return ListTile(
-          leading: const Icon(Icons.person),
+          leading: CircleAvatar(
+            backgroundColor: Colors.grey.shade300,
+            child: const Icon(Icons.person, color: Colors.black87),
+          ),
           title: Text(a.artist),
           subtitle: Text("${a.numberOfTracks} Tracks"),
         );
@@ -241,7 +281,7 @@ class _HomeScreenState extends State<HomeScreen>
       itemBuilder: (_, i) {
         final a = albums[i];
         return ListTile(
-          leading: const Icon(Icons.album),
+          leading: const Icon(Icons.album_rounded, size: 32),
           title: Text(a.album),
           subtitle: Text("${a.numOfSongs} Songs"),
         );
@@ -249,18 +289,17 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // FOLDERS TAB
+  // FOLDERS TAB (Premium tiles)
   Widget _foldersTab(BuildContext context) {
     if (folders.isEmpty) return const Center(child: CircularProgressIndicator());
 
     if (!isGridView) {
-      // LIST VIEW
       return ListView.builder(
         itemCount: folders.length,
         itemBuilder: (_, i) {
           final f = folders[i];
           return ListTile(
-            leading: const Icon(Icons.folder, size: 32),
+            leading: const Icon(Icons.folder_rounded, color: Colors.amber, size: 32),
             title: Text(f.split("/").last),
             subtitle: Text(f),
             onTap: () {
@@ -276,15 +315,18 @@ class _HomeScreenState extends State<HomeScreen>
       );
     }
 
-    // GRID VIEW
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       itemCount: folders.length,
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: .80,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+      ),
       itemBuilder: (_, i) {
         final f = folders[i];
-        final folderName = f.split("/").last;
+        final name = f.split("/").last;
 
         return GestureDetector(
           onTap: () {
@@ -295,27 +337,87 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             );
           },
-          child: Column(
-            children: [
-              Container(
-                height: 120,
-                width: 120,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.07),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
+              ],
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Container(
+                  height: 100,
+                  width: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.folder_rounded,
+                      size: 60, color: Colors.orange),
                 ),
-                child: const Icon(Icons.folder, size: 70, color: Colors.orange),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                folderName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
+                const SizedBox(height: 10),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style:
+                      const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                )
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  // FAVORITES TAB
+  Widget _favoritesTab(BuildContext context) {
+    final fav = Provider.of<FavoritesController>(context);
+    final controller = Provider.of<AudioPlayerController>(context);
+
+    final favSongs = songs.where((s) => fav.isFavorite(s.id)).toList();
+
+    if (favSongs.isEmpty) {
+      return const Center(
+        child: Text("No favorites yet ❤️", style: TextStyle(fontSize: 16)),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: favSongs.length,
+      itemBuilder: (_, i) {
+        final s = favSongs[i];
+        return TrackTile(
+          title: s.title,
+          artist: s.artist ?? "Unknown",
+          songId: s.id,
+          onTap: () {
+            controller.setPlaylist(favSongs);
+            controller.playSong(s);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _playlistsTab() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.queue_music_rounded, size: 80),
+          SizedBox(height: 16),
+          Text("No playlists yet"),
+        ],
+      ),
     );
   }
 }
