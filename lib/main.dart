@@ -9,12 +9,12 @@ import 'player/favorites_controller.dart';
 void main() {
   runApp(
     MultiProvider(
-    providers: [
-      ChangeNotifierProvider(create: (_) => AudioPlayerController()),
-      ChangeNotifierProvider(create: (_) => ThemeController()),
-      ChangeNotifierProvider(create: (_) => FavoritesController()),
-    ],
-    child: const VinuMusicApp(),
+      providers: [
+        ChangeNotifierProvider(create: (_) => AudioPlayerController()),
+        ChangeNotifierProvider(create: (_) => ThemeController()),
+        ChangeNotifierProvider(create: (_) => FavoritesController()),
+      ],
+      child: const VinuMusicApp(),
     ),
   );
 }
@@ -24,22 +24,26 @@ class VinuMusicApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeController>(context);
+    // Theme updates should rebuild the MaterialApp → use watch()
+    final theme = context.watch<ThemeController>();
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+
       theme: ThemeData(
         brightness: Brightness.light,
         primaryColor: theme.accentColor,
         useMaterial3: true,
       ),
+
       darkTheme: ThemeData(
         brightness: Brightness.dark,
         primaryColor: theme.accentColor,
         scaffoldBackgroundColor: Colors.black,
         useMaterial3: true,
       ),
+
       home: const Scaffold(
         body: Stack(
           children: [

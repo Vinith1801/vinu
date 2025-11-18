@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class SeekBar extends StatelessWidget {
   final Duration position;
   final Duration duration;
-  final Function(Duration) onChangeEnd;
+  final ValueChanged<Duration> onChangeEnd;
 
   const SeekBar({
     super.key,
@@ -16,11 +16,12 @@ class SeekBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final pos = position.inMilliseconds.toDouble();
     final dur = duration.inMilliseconds.toDouble();
+
     final theme = Theme.of(context);
+    final sliderValue = pos.clamp(0, dur).toDouble();
 
     return Column(
       children: [
-        // ----- SLIDER -----
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 4,
@@ -32,16 +33,15 @@ class SeekBar extends StatelessWidget {
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
           ),
           child: Slider(
-            min: 0,
-            max: dur,
-            value: pos.clamp(0, dur),
-            onChanged: (_) {}, // disabled dragging indicator
-            onChangeEnd: (value) =>
-                onChangeEnd(Duration(milliseconds: value.toInt())),
-          ),
+                min: 0,
+                max: dur > 0 ? dur : 1,
+                value: sliderValue,
+                onChanged: (_) {},
+                onChangeEnd: (value) =>
+                    onChangeEnd(Duration(milliseconds: value.toInt())),
+              )
         ),
 
-        // ----- TIME LABELS -----
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
@@ -71,8 +71,8 @@ class SeekBar extends StatelessWidget {
   }
 
   String _format(Duration d) {
-    final m = d.inMinutes.toString().padLeft(2, '0');
-    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return "$m:$s";
   }
 }
