@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 
-/// Immutable snapshot for UI
+/// Immutable snapshot used in UI
 class PositionData {
   final Duration position;
   final Duration bufferedPosition;
@@ -24,7 +24,11 @@ class AudioPlayerController extends ChangeNotifier {
 
   int currentIndex = 0;
 
-  // Combined position stream
+  // ============ Shuffle & Repeat ============
+  bool isShuffling = false;
+  LoopMode loopMode = LoopMode.off;
+
+  // ============ Combined Position Stream ============
   StreamController<PositionData>? _posDataCtrl;
 
   Duration _pos = Duration.zero;
@@ -38,14 +42,14 @@ class AudioPlayerController extends ChangeNotifier {
   StreamSubscription? _playingEnforceSub;
 
   AudioPlayerController() {
-    // Track index changes
+    // Track current index changes
     _indexSub = player.currentIndexStream.listen((index) {
       if (index == null) return;
       currentIndex = index;
       notifyListeners();
     });
 
-    // Defensive: ensure playback speed stays normal
+    // Auto-enforce normal speed
     _playingEnforceSub = player.playingStream.listen((isPlaying) {
       if (isPlaying) {
         try {
@@ -55,9 +59,9 @@ class AudioPlayerController extends ChangeNotifier {
     });
   }
 
-  // -------------------------------------------------------------
+  // ===========================================================
   // GETTERS
-  // -------------------------------------------------------------
+  // ===========================================================
 
   SongModel? get currentSong =>
       playlist.isEmpty ? null : playlist[currentIndex];
@@ -68,9 +72,9 @@ class AudioPlayerController extends ChangeNotifier {
 
   Stream<bool> get playingStream => player.playingStream;
 
-  // -------------------------------------------------------------
+  // ===========================================================
   // POSITION STREAM
-  // -------------------------------------------------------------
+  // ===========================================================
 
   Stream<PositionData> get positionDataStream {
     _ensurePositionStream();
@@ -100,16 +104,18 @@ class AudioPlayerController extends ChangeNotifier {
 
   void _emitData() {
     if (_posDataCtrl == null || _posDataCtrl!.isClosed) return;
-    _posDataCtrl!.add(PositionData(
-      position: _pos,
-      bufferedPosition: _buff,
-      duration: _dur,
-    ));
+    _posDataCtrl!.add(
+      PositionData(
+        position: _pos,
+        bufferedPosition: _buff,
+        duration: _dur,
+      ),
+    );
   }
 
-  // -------------------------------------------------------------
-  // PLAYLIST LOGIC — MODERN API + FIXED URI
-  // -------------------------------------------------------------
+  // ===========================================================
+  // PLAYLIST LOGIC  (Modern JustAudio API)
+  // ===========================================================
 
   Future<void> setPlaylist(
     List<SongModel> songs, {
@@ -117,14 +123,12 @@ class AudioPlayerController extends ChangeNotifier {
   }) async {
     playlist = List<SongModel>.from(songs);
 
-    // Build index lookup
     _idToIndex.clear();
     for (int i = 0; i < playlist.length; i++) {
       _idToIndex[playlist[i].id] = i;
     }
 
-    // IMPORTANT FIX:
-    // Use s.data as file path instead of s.uri (content:// makes audio fast)
+    // Use file paths (faster, clean, reliable)
     final sources = playlist
         .map((s) => AudioSource.uri(Uri.file(s.data)))
         .toList();
@@ -135,7 +139,7 @@ class AudioPlayerController extends ChangeNotifier {
       initialPosition: Duration.zero,
     );
 
-    // Force correct speed
+    // Reset speed to normal
     try {
       await player.setSpeed(1.0);
     } catch (_) {}
@@ -146,9 +150,9 @@ class AudioPlayerController extends ChangeNotifier {
     await player.play();
   }
 
-  // -------------------------------------------------------------
+  // ===========================================================
   // PLAY SPECIFIC INDEX
-  // -------------------------------------------------------------
+  // ===========================================================
 
   Future<void> playIndex(int index) async {
     if (index < 0 || index >= playlist.length) return;
@@ -164,30 +168,27 @@ class AudioPlayerController extends ChangeNotifier {
     await player.play();
   }
 
-  // -------------------------------------------------------------
-  // Legacy compatibility (SearchScreen / FolderSongsScreen)
-  // -------------------------------------------------------------
-
+  // Legacy compatibility
   Future<void> playSong(SongModel song) async {
     final idx = _idToIndex[song.id];
-    if (idx != null) {
-      await playIndex(idx);
-    }
+    if (idx != null) playIndex(idx);
   }
 
-  // -------------------------------------------------------------
+  // ===========================================================
   // CONTROLS
-  // -------------------------------------------------------------
+  // ===========================================================
 
   void togglePlayPause() {
     player.playing ? player.pause() : player.play();
   }
 
   void next() => player.seekToNext();
+
   void previous() => player.seekToPrevious();
 
-  Future<void> seek(Duration position) => player.seek(position);
+  Future<void> seek(Duration position) async => player.seek(position);
 
+  // Playback speed adjustment
   Future<void> setPlaybackSpeed(double speed) async {
     final s = speed.clamp(0.25, 3.0);
     try {
@@ -195,9 +196,38 @@ class AudioPlayerController extends ChangeNotifier {
     } catch (_) {}
   }
 
-  // -------------------------------------------------------------
+  // ===========================================================
+  // SHUFFLE + REPEAT LOGIC
+  // ===========================================================
+
+  Future<void> toggleShuffle() async {
+    isShuffling = !isShuffling;
+    await player.setShuffleModeEnabled(isShuffling);
+    notifyListeners();
+  }
+
+  void toggleRepeat() {
+    switch (loopMode) {
+      case LoopMode.off:
+        loopMode = LoopMode.all;
+        break;
+
+      case LoopMode.all:
+        loopMode = LoopMode.one;
+        break;
+
+      case LoopMode.one:
+        loopMode = LoopMode.off;
+        break;
+    }
+
+    player.setLoopMode(loopMode);
+    notifyListeners();
+  }
+
+  // ===========================================================
   // CLEANUP
-  // -------------------------------------------------------------
+  // ===========================================================
 
   @override
   void dispose() {

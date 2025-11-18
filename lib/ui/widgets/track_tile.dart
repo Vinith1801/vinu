@@ -19,22 +19,29 @@ class TrackTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fav = Provider.of<FavoritesController>(context);
+    final fav = context.watch<FavoritesController>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+          ],
+        ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ======================
-            // ARTWORK
-            // ======================
+            // Artwork
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: QueryArtworkWidget(
@@ -43,8 +50,8 @@ class TrackTile extends StatelessWidget {
                 artworkHeight: 55,
                 artworkWidth: 55,
                 nullArtworkWidget: Container(
-                  width: 55,
                   height: 55,
+                  width: 55,
                   color: Colors.grey.shade300,
                   child: const Icon(Icons.music_note, color: Colors.black54),
                 ),
@@ -53,46 +60,38 @@ class TrackTile extends StatelessWidget {
 
             const SizedBox(width: 14),
 
-            // ======================
-            // TEXT INFO
-            // ======================
+            // Song title + artist
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // TITLE
                   Text(
                     title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: isDark ? Colors.white : Colors.black,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                   ),
-
                   const SizedBox(height: 2),
-
-                  // ARTIST
                   Text(
                     artist,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white70 : Colors.grey.shade700,
-                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark ? Colors.white70 : Colors.grey.shade600,
+                    ),
                   ),
                 ],
               ),
             ),
 
-            const SizedBox(width: 8),
+            const SizedBox(width: 10),
 
-            // ======================
-            // FAVORITE BUTTON
-            // ======================
+            // Favorite button
             GestureDetector(
               onTap: () => fav.toggleFavorite(songId),
               child: AnimatedSwitcher(

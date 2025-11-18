@@ -27,7 +27,8 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
     final allSongs = await _audioQuery.querySongs();
 
     folderSongs = allSongs.where((s) {
-      return s.data.contains(widget.folderPath);
+      // More accurate folder detection
+      return s.data.startsWith(widget.folderPath);
     }).toList();
 
     folderSongs.sort((a, b) => a.title.compareTo(b.title));
@@ -37,8 +38,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<AudioPlayerController>(context);
-
+    final controller = context.read<AudioPlayerController>();
     final folderName = widget.folderPath.split("/").last;
 
     return Scaffold(
@@ -50,7 +50,10 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
         foregroundColor: Colors.black,
         title: Text(
           folderName,
-          style: const TextStyle(fontSize: 20),
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
 
@@ -60,78 +63,60 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
               children: [
                 const SizedBox(height: 10),
 
-                // PLAY ALL BUTTON - PREMIUM STYLE
+                // PLAY ALL BUTTON
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
+                  child: SizedBox(
+                    height: 55,
+                    child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        foregroundColor: Colors.white,
                         elevation: 0,
-                        minimumSize: const Size.fromHeight(55),
+                        backgroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
                       ),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 28),
-                      label: const Text(
-                        "Play All",
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                       onPressed: () {
                         controller.setPlaylist(folderSongs);
-                        controller.playSong(folderSongs.first);
+                        controller.playIndex(0);
                       },
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.play_arrow_rounded, size: 28),
+                          SizedBox(width: 8),
+                          Text(
+                            "Play All",
+                            style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
 
-                // SONG LIST WITH PREMIUM CARD LOOK
+                // SONG LIST (NO EXTRA CARDS)
                 Expanded(
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     itemCount: folderSongs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (_, i) {
                       final s = folderSongs[i];
 
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            )
-                          ],
-                        ),
-                        child: TrackTile(
-                          title: s.title,
-                          artist: s.artist ?? "Unknown Artist",
-                          songId: s.id,
-                          onTap: () {
-                            controller.setPlaylist(folderSongs);
-                            controller.playSong(s);
-                          },
-                        ),
+                      return TrackTile(
+                        title: s.title,
+                        artist: s.artist ?? "Unknown Artist",
+                        songId: s.id,
+                        onTap: () {
+                          controller.setPlaylist(folderSongs);
+                          controller.playIndex(i);
+                        },
                       );
                     },
                   ),

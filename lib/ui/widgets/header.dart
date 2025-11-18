@@ -11,27 +11,26 @@ class Header extends StatelessWidget {
     final accent = Theme.of(context).colorScheme.primary;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Row(
         children: [
-          // --- APP TITLE WITH PREMIUM UNDERLINE EFFECT ---
+          // Title + underline
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 "Vinu",
                 style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: 0.4,
                   color: isDark ? Colors.white : Colors.black,
                 ),
               ),
-              const SizedBox(height: 2),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                height: 3,
-                width: 34,
+              const SizedBox(height: 4),
+              Container(
+                height: 4,
+                width: 40,
                 decoration: BoxDecoration(
                   color: accent,
                   borderRadius: BorderRadius.circular(20),
@@ -42,39 +41,37 @@ class Header extends StatelessWidget {
 
           const Spacer(),
 
-          // --- SEARCH BUTTON (PREMIUM ICON STYLE) ---
-          _iconBtn(
+          // Search button
+          _glassBtn(
             context,
             icon: Icons.search_rounded,
             onTap: () {
               Navigator.push(
                 context,
                 PageRouteBuilder(
-                  transitionDuration: const Duration(milliseconds: 250),
+                  transitionDuration: const Duration(milliseconds: 220),
                   pageBuilder: (_, __, ___) => const SearchScreen(),
-                  transitionsBuilder: (_, anim, __, child) {
-                    return FadeTransition(opacity: anim, child: child);
-                  },
+                  transitionsBuilder: (_, anim, __, child) =>
+                      FadeTransition(opacity: anim, child: child),
                 ),
               );
             },
           ),
 
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
 
-          // --- SETTINGS BUTTON ---
-          _iconBtn(
+          // Settings
+          _glassBtn(
             context,
             icon: Icons.settings_rounded,
             onTap: () {
               Navigator.push(
                 context,
                 PageRouteBuilder(
-                  transitionDuration: const Duration(milliseconds: 250),
+                  transitionDuration: const Duration(milliseconds: 220),
                   pageBuilder: (_, __, ___) => const SettingsScreen(),
-                  transitionsBuilder: (_, anim, __, child) {
-                    return FadeTransition(opacity: anim, child: child);
-                  },
+                  transitionsBuilder: (_, anim, __, child) =>
+                      FadeTransition(opacity: anim, child: child),
                 ),
               );
             },
@@ -84,15 +81,13 @@ class Header extends StatelessWidget {
     );
   }
 
-  // PREMIUM ICON BUTTON
-  Widget _iconBtn(BuildContext context,
+  Widget _glassBtn(BuildContext context,
       {required IconData icon, required VoidCallback onTap}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
-      splashColor: Colors.grey.withOpacity(0.1),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
@@ -101,8 +96,8 @@ class Header extends StatelessWidget {
           boxShadow: [
             if (!isDark)
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 10,
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
           ],
