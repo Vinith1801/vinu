@@ -70,7 +70,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {});
   }
 
-  TextSpan highlight(String text) {
+  TextSpan highlight(String text, Color highlightColor) {
     if (queryText.isEmpty) return TextSpan(text: text);
 
     final lower = text.toLowerCase();
@@ -84,8 +84,8 @@ class _SearchScreenState extends State<SearchScreen> {
         TextSpan(text: text.substring(0, start)),
         TextSpan(
           text: text.substring(start, start + q.length),
-          style: const TextStyle(
-            color: Colors.black,
+          style: TextStyle(
+            color: highlightColor,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -96,43 +96,56 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Provider.of<AudioPlayerController>(context);
+    final controller = context.read<AudioPlayerController>();
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: scheme.surface,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.grey.shade100,
-        foregroundColor: Colors.black,
-        title: const Text("Search", style: TextStyle(fontSize: 20)),
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
+        title: Text("Search",
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface)),
       ),
 
       body: Column(
         children: [
           const SizedBox(height: 10),
 
-          // PREMIUM SEARCH BAR
+          // -------------------------------------
+          // Premium Search Bar
+          // -------------------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 250),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: scheme.surfaceContainerHighest.withValues(
+                alpha: scheme.brightness == Brightness.dark ? 0.3 : 0.8,
+              ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
+                  if (scheme.brightness == Brightness.light)
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
                 ],
               ),
               child: TextField(
                 onChanged: search,
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16, color: scheme.onSurface),
                 decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search, size: 22),
+                  prefixIcon: Icon(Icons.search,
+                      size: 22, color: scheme.onSurfaceVariant),
                   hintText: "Search songs, artists, albums",
+                  hintStyle:
+                      TextStyle(color: scheme.onSurfaceVariant),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 14),
@@ -143,48 +156,56 @@ class _SearchScreenState extends State<SearchScreen> {
 
           const SizedBox(height: 14),
 
-          // CATEGORY SELECTOR (Premium Pills)
+          // -------------------------------------
+          // CATEGORY CHIPS
+          // -------------------------------------
           SizedBox(
             height: 42,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.only(left: 16),
               children: [
-                _categoryChip("Songs"),
+                _categoryChip("Songs", scheme),
                 const SizedBox(width: 10),
-                _categoryChip("Artists"),
+                _categoryChip("Artists", scheme),
                 const SizedBox(width: 10),
-                _categoryChip("Albums"),
+                _categoryChip("Albums", scheme),
               ],
             ),
           ),
 
           const SizedBox(height: 10),
 
+          // -------------------------------------
+          // RESULTS
+          // -------------------------------------
           Expanded(
             child: results.isEmpty
-                ? const Center(
+                ? Center(
                     child: Text(
                       "No results found",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
                   )
                 : ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     itemCount: results.length,
-                    itemBuilder: (context, i) {
+                    itemBuilder: (_, i) {
                       if (category == "Songs") {
-                        final song = results[i];
-                        return _songTile(song, controller);
+                        return _songTile(
+                            results[i],
+                            controller,
+                            scheme);
                       }
 
                       if (category == "Artists") {
-                        final artist = results[i];
-                        return _artistTile(artist);
+                        return _artistTile(results[i], scheme);
                       }
 
-                      final album = results[i];
-                      return _albumTile(album);
+                      return _albumTile(results[i], scheme);
                     },
                   ),
           ),
@@ -193,9 +214,10 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  // ------------------ Premium Widgets -------------------
-
-  Widget _categoryChip(String name) {
+  // -----------------------------------------------------------
+  // CATEGORY CHIP - PREMIUM PILL
+  // -----------------------------------------------------------
+  Widget _categoryChip(String name, ColorScheme scheme) {
     final selected = category == name;
 
     return GestureDetector(
@@ -205,18 +227,20 @@ class _SearchScreenState extends State<SearchScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         decoration: BoxDecoration(
-          color: selected ? Colors.black : Colors.white,
+          color: selected ? scheme.primary : scheme.surface,
           borderRadius: BorderRadius.circular(30),
           border: Border.all(
-              color: selected ? Colors.black : Colors.grey.shade300),
+            color: selected
+                ? scheme.primary
+                : scheme.outline.withValues(alpha: 0.04),
+          ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
-                    blurRadius: 10,
+                    color: scheme.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   )
                 ]
@@ -225,7 +249,7 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Text(
           name,
           style: TextStyle(
-            color: selected ? Colors.white : Colors.black,
+            color: selected ? scheme.onPrimary : scheme.onSurface,
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -234,20 +258,13 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _songTile(SongModel s, AudioPlayerController controller) {
+  // -----------------------------------------------------------
+  // SONG TILE
+  // -----------------------------------------------------------
+  Widget _songTile(
+      SongModel s, AudioPlayerController controller, ColorScheme scheme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
       child: ListTile(
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -259,53 +276,74 @@ class _SearchScreenState extends State<SearchScreen> {
             nullArtworkWidget: Container(
               width: 55,
               height: 55,
-              color: Colors.grey.shade300,
-              child: const Icon(Icons.music_note, color: Colors.black54),
+              color: scheme.surfaceContainerHighest,
+              child: Icon(Icons.music_note,
+                  color: scheme.onSurfaceVariant),
             ),
           ),
         ),
-        title: Text(s.title,
-            maxLines: 1, overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(s.artist ?? "Unknown",
-            maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(
+          s.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontWeight: FontWeight.w600, color: scheme.onSurface),
+        ),
+        subtitle: Text(
+          s.artist ?? "Unknown Artist",
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
         onTap: () {
           controller.setPlaylist(results.cast<SongModel>());
           controller.playSong(s);
         },
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        tileColor: scheme.surfaceContainerHighest.withValues(alpha: 0.2),
       ),
     );
   }
 
-  Widget _artistTile(ArtistModel a) {
+  // -----------------------------------------------------------
+  // ARTIST TILE
+  // -----------------------------------------------------------
+  Widget _artistTile(ArtistModel a, ColorScheme scheme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
       height: 70,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surfaceContainerHighest.withValues(
+          alpha: scheme.brightness == Brightness.dark ? 0.2 : 0.7,
+        ),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          )
+          if (scheme.brightness == Brightness.light)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            )
         ],
       ),
       child: Row(
         children: [
+          const SizedBox(width: 10),
           CircleAvatar(
             radius: 26,
-            backgroundColor: Colors.grey.shade300,
-            child: const Icon(Icons.person, size: 28, color: Colors.black87),
+            backgroundColor: scheme.surfaceContainerHighest,
+            child: Icon(Icons.person,
+                size: 28, color: scheme.onSurfaceVariant),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               a.artist,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 16),
+              style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  color: scheme.onSurface),
             ),
           ),
         ],
@@ -313,31 +351,41 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _albumTile(AlbumModel a) {
+  // -----------------------------------------------------------
+  // ALBUM TILE
+  // -----------------------------------------------------------
+  Widget _albumTile(AlbumModel a, ColorScheme scheme) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 10),
       height: 70,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: scheme.surfaceContainerHighest.withValues(
+          alpha: scheme.brightness == Brightness.dark ? 0.2 : 0.7,
+        ),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          )
+          if (scheme.brightness == Brightness.light)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            )
         ],
       ),
       child: Row(
         children: [
-          const Icon(Icons.album_rounded, size: 32),
+          const SizedBox(width: 12),
+          Icon(Icons.album_rounded,
+              size: 32, color: scheme.onSurfaceVariant),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               a.album,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 16),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: scheme.onSurface,
+              ),
             ),
           ),
         ],

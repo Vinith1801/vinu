@@ -14,7 +14,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   final OnAudioQuery _audioQuery = OnAudioQuery();
 
   List<SongModel> songs = [];
@@ -38,9 +39,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       bool permission = await _audioQuery.permissionsStatus();
       if (!permission) permission = await _audioQuery.permissionsRequest();
       if (!permission) {
-        setState(() {
-          _loading = false;
-        });
+        setState(() => _loading = false);
         return;
       }
 
@@ -71,8 +70,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    final accent = Theme.of(context).colorScheme.primary;
-    final premiumText = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[900]);
+    final scheme = Theme.of(context).colorScheme;
+
+    final text = scheme.onSurface;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
+    final surface = scheme.surface;
 
     return SafeArea(
       child: Column(
@@ -80,17 +82,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const Header(),
           const SizedBox(height: 6),
 
-          // Tabs (Apple-music style subtle)
+          // -----------------------------
+          //       TOP TAB BAR
+          // -----------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: TabBar(
               controller: tabController,
               isScrollable: true,
-              labelColor: Colors.black87,
-              unselectedLabelColor: Colors.grey.shade500,
-              labelStyle: premiumText,
+              labelColor: text,
+              unselectedLabelColor: muted,
+              labelStyle: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w600, color: text),
               indicator: UnderlineTabIndicator(
-                borderSide: BorderSide(width: 3, color: accent),
+                borderSide: BorderSide(width: 3, color: scheme.primary),
                 insets: const EdgeInsets.symmetric(horizontal: 12),
               ),
               tabs: const [
@@ -106,7 +111,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
           const SizedBox(height: 10),
 
-          // Grid / List toggle (Apple style pill)
+          // -----------------------------
+          //   LIST / GRID TOGGLE
+          // -----------------------------
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -115,38 +122,42 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   onTap: () => setState(() => isGridView = !isGridView),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 220),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
+                      color: surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade200),
+                      border: Border.all(color: scheme.outline),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 200),
-                          child: Icon(isGridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                          child: Icon(
+                              isGridView
+                                  ? Icons.view_list_rounded
+                                  : Icons.grid_view_rounded,
                               key: ValueKey(isGridView),
                               size: 18,
-                              color: Colors.grey.shade800),
+                              color: text),
                         ),
                         const SizedBox(width: 8),
-                        Text(isGridView ? "List" : "Grid", style: TextStyle(color: Colors.grey.shade800)),
+                        Text(isGridView ? "List" : "Grid",
+                            style: TextStyle(color: text)),
                       ],
                     ),
                   ),
                 ),
                 const Spacer(),
-                // Optional: small info badge
-                Text("${songs.length} tracks", style: TextStyle(color: Colors.grey.shade600)),
+                Text("${songs.length} tracks",
+                    style: TextStyle(color: muted)),
               ],
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // Content
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
@@ -155,9 +166,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     children: [
                       _songsTab(context, isGridView),
                       _favoritesTab(context, isGridView),
-                      _playlistsTab(),
-                      _artistsTab(),
-                      _albumsTab(),
+                      _playlistsTab(context),
+                      _artistsTab(context),
+                      _albumsTab(context),
                       _foldersTab(context, isGridView),
                     ],
                   ),
@@ -167,19 +178,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // ======================================================
+  //                     SONGS TAB
+  // ======================================================
   Widget _songsTab(BuildContext context, bool grid) {
     final controller = context.read<AudioPlayerController>();
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
 
     if (songs.isEmpty) {
-      return const Center(child: Text("No songs found", style: TextStyle(color: Colors.black54)));
+      return Center(
+        child: Text("No songs found", style: TextStyle(color: muted)),
+      );
     }
 
     if (!grid) {
-      // List - use separated List for airy spacing
       return ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: songs.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, i) {
           final s = songs[i];
           return AnimatedOpacity(
@@ -189,14 +206,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               title: s.title,
               artist: s.artist ?? "Unknown",
               songId: s.id,
-              onTap: () => controller.setPlaylist(songs, initialIndex: i),
+              onTap: () =>
+                  controller.setPlaylist(songs, initialIndex: i),
             ),
           );
         },
       );
     }
 
-    // Grid view (2 columns, Apple-like card)
     return GridView.builder(
       padding: const EdgeInsets.all(14),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -208,32 +225,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemCount: songs.length,
       itemBuilder: (context, i) {
         final s = songs[i];
-        return _songGridCard(context, s, () => context.read<AudioPlayerController>().setPlaylist(songs, initialIndex: i));
+        return _songGridCard(context, s,
+            () => controller.setPlaylist(songs, initialIndex: i));
       },
     );
   }
 
-  Widget _songGridCard(BuildContext context, SongModel s, VoidCallback onTap) {
+  Widget _songGridCard(
+      BuildContext context, SongModel s, VoidCallback onTap) {
+    final scheme = Theme.of(context).colorScheme;
+    final text = scheme.onSurface;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(blue: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 6),
-            ),
+            )
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // SQUARE artwork — Apple Style
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(14)),
               child: QueryArtworkWidget(
                 id: s.id,
                 type: ArtworkType.AUDIO,
@@ -241,8 +264,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 artworkWidth: double.infinity,
                 nullArtworkWidget: Container(
                   height: 150,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.music_note, size: 40, color: Colors.black26),
+                  color: scheme.surfaceContainerHighest,
+                  child: Icon(Icons.music_note,
+                      size: 40, color: muted),
                 ),
               ),
             ),
@@ -256,10 +280,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: text),
               ),
             ),
 
@@ -271,10 +295,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 s.artist ?? "Unknown Artist",
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 12, color: muted),
               ),
             ),
 
@@ -285,28 +306,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  // ======================================================
+  //                 FAVORITES TAB
+  // ======================================================
   Widget _favoritesTab(BuildContext context, bool grid) {
     final fav = context.watch<FavoritesController>();
     final controller = context.read<AudioPlayerController>();
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
 
-    final favSongs = songs.where((s) => fav.isFavorite(s.id)).toList();
+    final favSongs =
+        songs.where((s) => fav.isFavorite(s.id)).toList();
 
     if (favSongs.isEmpty) {
-      return const Center(child: Text("No favorites yet ❤️", style: TextStyle(color: Colors.black54)));
+      return Center(
+        child: Text("No favorites yet ❤️",
+            style: TextStyle(color: muted)),
+      );
     }
 
     if (!grid) {
       return ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: favSongs.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
           final s = favSongs[i];
           return TrackTile(
             title: s.title,
             artist: s.artist ?? "Unknown",
             songId: s.id,
-            onTap: () => controller.setPlaylist(favSongs, initialIndex: i),
+            onTap: () => controller.setPlaylist(favSongs,
+                initialIndex: i),
           );
         },
       );
@@ -323,27 +354,45 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemCount: favSongs.length,
       itemBuilder: (context, i) {
         final s = favSongs[i];
-        return _songGridCard(context, s, () => context.read<AudioPlayerController>().setPlaylist(favSongs, initialIndex: i));
+        return _songGridCard(context, s,
+            () => controller.setPlaylist(favSongs, initialIndex: i));
       },
     );
   }
 
-  Widget _playlistsTab() {
-    // Placeholder - kept minimal for now
-    return const Center(
+  // ======================================================
+  //                 PLAYLISTS
+  // ======================================================
+  Widget _playlistsTab(BuildContext context) {
+    final muted =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.06);
+
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.queue_music_rounded, size: 72, color: Colors.black26),
-          SizedBox(height: 12),
-          Text("No playlists yet", style: TextStyle(color: Colors.black54)),
+          Icon(Icons.queue_music_rounded,
+              size: 72, color: muted.withValues(alpha: 0.04)),
+          const SizedBox(height: 12),
+          Text("No playlists yet",
+              style: TextStyle(color: muted)),
         ],
       ),
     );
   }
 
-  Widget _artistsTab() {
-    if (artists.isEmpty) return const Center(child: Text("No artists", style: TextStyle(color: Colors.black54)));
+  // ======================================================
+  //                 ARTISTS
+  // ======================================================
+  Widget _artistsTab(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
+
+    if (artists.isEmpty) {
+      return Center(
+        child: Text("No artists", style: TextStyle(color: muted)),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -351,17 +400,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemBuilder: (_, i) {
         final a = artists[i];
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          leading: CircleAvatar(backgroundColor: Colors.grey.shade200, child: const Icon(Icons.person, color: Colors.black54)),
-          title: Text(a.artist, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text("${a.numberOfTracks} Tracks", style: TextStyle(color: Colors.grey.shade600)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          leading: CircleAvatar(
+              backgroundColor: scheme.surfaceContainerHighest,
+              child: Icon(Icons.person, color: muted)),
+          title: Text(
+            a.artist,
+            style: TextStyle(
+                fontWeight: FontWeight.w700, color: scheme.onSurface),
+          ),
+          subtitle: Text("${a.numberOfTracks} Tracks",
+              style: TextStyle(color: muted)),
         );
       },
     );
   }
 
-  Widget _albumsTab() {
-    if (albums.isEmpty) return const Center(child: Text("No albums", style: TextStyle(color: Colors.black54)));
+  // ======================================================
+  //                 ALBUMS
+  // ======================================================
+  Widget _albumsTab(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
+
+    if (albums.isEmpty) {
+      return Center(
+        child: Text("No albums", style: TextStyle(color: muted)),
+      );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -369,20 +436,40 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemBuilder: (_, i) {
         final a = albums[i];
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           leading: ClipRRect(
             borderRadius: BorderRadius.circular(8),
-            child: Container(width: 56, height: 56, color: Colors.grey.shade100, child: const Icon(Icons.album_rounded, color: Colors.black26)),
+            child: Container(
+              width: 56,
+              height: 56,
+              color: scheme.surfaceContainerHighest,
+              child: Icon(Icons.album_rounded, color: muted),
+            ),
           ),
-          title: Text(a.album, style: const TextStyle(fontWeight: FontWeight.w700)),
-          subtitle: Text("${a.numOfSongs} Songs", style: TextStyle(color: Colors.grey.shade600)),
+          title: Text(a.album,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onSurface)),
+          subtitle:
+              Text("${a.numOfSongs} Songs", style: TextStyle(color: muted)),
         );
       },
     );
   }
 
+  // ======================================================
+  //                 FOLDERS
+  // ======================================================
   Widget _foldersTab(BuildContext context, bool grid) {
-    if (folders.isEmpty) return const Center(child: Text("No folders found", style: TextStyle(color: Colors.black54)));
+    final scheme = Theme.of(context).colorScheme;
+    final muted = scheme.onSurface.withValues(alpha: 0.06);
+
+    if (folders.isEmpty) {
+      return Center(
+        child: Text("No folders found", style: TextStyle(color: muted)),
+      );
+    }
 
     if (!grid) {
       return ListView.builder(
@@ -391,19 +478,29 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         itemBuilder: (_, i) {
           final f = folders[i];
           final name = f.split("/").last;
+
           return ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             leading: Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(10)),
-              child: const Icon(Icons.folder_rounded, color: Colors.orange),
+              decoration: BoxDecoration(
+                color: scheme.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.folder_rounded, color: scheme.primary),
             ),
-            title: Text(name, style: const TextStyle(fontWeight: FontWeight.w700)),
-            subtitle: Text(f, style: TextStyle(color: Colors.grey.shade600)),
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => FolderSongsScreen(folderPath: f)));
-            },
+            title: Text(name,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface)),
+            subtitle: Text(f, style: TextStyle(color: muted)),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => FolderSongsScreen(folderPath: f)),
+            ),
           );
         },
       );
@@ -421,18 +518,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       itemBuilder: (_, i) {
         final f = folders[i];
         final name = f.split("/").last;
+
         return GestureDetector(
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => FolderSongsScreen(folderPath: f))),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => FolderSongsScreen(folderPath: f)),
+          ),
           child: Container(
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 6))
-            ]),
+            decoration: BoxDecoration(
+              color: scheme.surface,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 6))
+              ],
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.folder_rounded, size: 52, color: Colors.orange.shade400),
+                Icon(Icons.folder_rounded,
+                    size: 52, color: scheme.primary),
                 const SizedBox(height: 10),
-                Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface),
+                ),
               ],
             ),
           ),

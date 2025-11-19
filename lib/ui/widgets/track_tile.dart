@@ -20,28 +20,18 @@ class TrackTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fav = context.watch<FavoritesController>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.04) : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-          ],
-        ),
         child: Row(
           children: [
+            // --------------------
             // Artwork
+            // --------------------
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: QueryArtworkWidget(
@@ -52,15 +42,20 @@ class TrackTile extends StatelessWidget {
                 nullArtworkWidget: Container(
                   height: 55,
                   width: 55,
-                  color: Colors.grey.shade300,
-                  child: const Icon(Icons.music_note, color: Colors.black54),
+                  color: scheme.surfaceContainerHighest,
+                  child: Icon(
+                    Icons.music_note,
+                    color: scheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ),
 
             const SizedBox(width: 14),
 
-            // Song title + artist
+            // --------------------
+            // Title + Artist
+            // --------------------
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +67,7 @@ class TrackTile extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : Colors.black,
+                      color: scheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -82,7 +77,7 @@ class TrackTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13,
-                      color: isDark ? Colors.white70 : Colors.grey.shade600,
+                      color: scheme.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -91,7 +86,9 @@ class TrackTile extends StatelessWidget {
 
             const SizedBox(width: 10),
 
+            // --------------------
             // Favorite button
+            // --------------------
             GestureDetector(
               onTap: () => fav.toggleFavorite(songId),
               child: AnimatedSwitcher(
@@ -103,7 +100,9 @@ class TrackTile extends StatelessWidget {
                       ? Icons.favorite_rounded
                       : Icons.favorite_border_rounded,
                   key: ValueKey(fav.isFavorite(songId)),
-                  color: fav.isFavorite(songId) ? Colors.red : Colors.grey,
+                  color: fav.isFavorite(songId)
+                      ? scheme.primary
+                      : scheme.onSurfaceVariant.withValues(alpha: 0.06),
                   size: 26,
                 ),
               ),

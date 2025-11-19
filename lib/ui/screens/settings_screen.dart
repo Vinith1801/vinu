@@ -7,242 +7,181 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Provider.of<ThemeController>(context);
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: theme.isDark ? const Color(0xFF111111) : Colors.grey.shade100,
-
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: theme.isDark ? Colors.white : Colors.black,
-        title: const Text("Settings", style: TextStyle(fontSize: 20)),
+        title: const Text("Customization Settings"),
       ),
-
       body: ListView(
-        padding: const EdgeInsets.all(18),
         children: [
+          const SizedBox(height: 10),
 
-          // ============ APPEARANCE ============
-          _sectionTitle("Appearance"),
-          _glassTile(
-            dark: theme.isDark,
-            child: SwitchListTile(
-              title: const Text("Dark Mode",
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              value: theme.isDark,
-              onChanged: (_) => theme.toggleDarkMode(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "Theme Color Sets",
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: scheme.onSurface,
+              ),
             ),
           ),
 
           const SizedBox(height: 12),
 
-          _glassTile(
-            dark: theme.isDark,
-            child: ListTile(
-              title: const Text("Accent Color",
-                  style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(
-                "Tap to change color",
-                style: TextStyle(color: theme.accentColor),
-              ),
-              trailing: CircleAvatar(
-                radius: 14,
-                backgroundColor: theme.accentColor,
-              ),
-              onTap: () => _showColorPicker(context),
-            ),
-          ),
+          _colorSetSelector(context),
 
-          const SizedBox(height: 28),
+          const SizedBox(height: 20),
 
-          // ============ PLAYBACK ============
-          _sectionTitle("Playback"),
-          _glassTile(
-            dark: theme.isDark,
-            child: Column(
-              children: [
-                _tile(Icons.equalizer, "Equalizer", "Coming soon"),
-                _divider(theme),
-                _tile(Icons.timer, "Sleep Timer", "Coming soon"),
-                _divider(theme),
-                _tile(Icons.speed, "Playback Speed", "Coming soon"),
-              ],
-            ),
-          ),
+          _section("Color & Theme Systems", [
+            "Dynamic Theme Generator",
+            "Gradient Builder",
+            "Dark/Light Mode Variants",
+            "Seasonal Themes",
+            "Material You Integration",
+          ], scheme),
 
-          const SizedBox(height: 28),
+          _section("Background Customization", [
+            "Background Blur Intensity",
+            "Custom Background Images",
+            "Animated Backgrounds",
+            "Transparency Controls",
+            "Video Backgrounds",
+          ], scheme),
 
-          // ============ UI CUSTOMIZATION ============
-          _sectionTitle("UI Customization"),
-          _glassTile(
-            dark: theme.isDark,
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text("Show Album Artwork in Lists"),
-                  value: true,
-                  onChanged: (v) {},
-                ),
-                _divider(theme),
-                SwitchListTile(
-                  title: const Text("Round Artwork Thumbnails"),
-                  value: true,
-                  onChanged: (v) {},
-                ),
-                _divider(theme),
-                SwitchListTile(
-                  title: const Text("Enable Mini-player"),
-                  value: true,
-                  onChanged: (v) {},
-                ),
-              ],
-            ),
-          ),
+          _section("Player Screen Customizations", [
+            "Player Layout Presets",
+            "Album Art Shapes",
+            "Artwork Effects",
+          ], scheme),
 
-          const SizedBox(height: 40),
+          _section("Interface Elements", [
+            "Custom Navigation Bars",
+            "Now Playing Widget Styles",
+            "Control Button Styles",
+          ], scheme),
+
+          _section("Animations & Transitions", [
+            "Page Transition Effects",
+            "Loading Animations",
+            "Micro-interactions",
+          ], scheme),
+
+          _section("Music Visualization", [
+            "Visualizer Types",
+            "Visualizer Customization",
+          ], scheme),
+
+          _section("Library View Options", [
+            "Grid Size Slider",
+            "View Modes",
+            "Sorting Visualizers",
+            "Custom Cover Grids",
+          ], scheme),
+
+          _section("Control Center & Widgets", [
+            "Home Screen Widgets",
+            "Always-on Display",
+            "Notification Player Styles",
+            "Quick Settings",
+          ], scheme),
+
+          _section("Typography & Text", [
+            "Font Library",
+            "Text Size Scaling",
+            "Text Colors",
+            "Text Effects",
+          ], scheme),
+
+          _section("Advanced Visual Features", [
+            "Custom Icon Packs",
+            "Cursor/Pointer Effects",
+            "Screen Saver Mode",
+            "AR/VR Mode",
+          ], scheme),
+
+          const SizedBox(height: 50),
         ],
       ),
     );
   }
 
-  // ============================================
-  // SECTION TITLE
-  // ============================================
+  Widget _colorSetSelector(BuildContext context) {
+    final theme = context.watch<ThemeController>();
+    final scheme = Theme.of(context).colorScheme;
 
-  Widget _sectionTitle(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10, left: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 17,
+    return SizedBox(
+      height: 80,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: theme.colorSets.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 14),
+        itemBuilder: (_, i) {
+          final set = theme.colorSets[i];
+          final selected = theme.selectedIndex == i;
+
+          return GestureDetector(
+            onTap: () => theme.setColorSet(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 80,
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected ? set.primary : scheme.outline.withValues(alpha: 0.5),
+                  width: selected ? 3 : 1,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _colorDot(set.primary),
+                  _colorDot(set.secondary),
+                  _colorDot(set.background),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _colorDot(Color c) => Container(
+        width: 18,
+        height: 18,
+        margin: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: c,
+          shape: BoxShape.circle,
+        ),
+      );
+
+  Widget _section(String title, List<String> items, ColorScheme scheme) {
+    return ExpansionTile(
+      title: Text(
+        title,
+        style: TextStyle(
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
+          color: scheme.onSurface,
         ),
       ),
-    );
-  }
-
-  // ============================================
-  // PREMIUM GLASS TILE CONTAINER
-  // ============================================
-
-  Widget _glassTile({required Widget child, required bool dark}) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      decoration: BoxDecoration(
-        color: dark ? const Color(0xFF1A1A1A) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: dark
-                ? Colors.black.withOpacity(0.4)
-                : Colors.black.withOpacity(0.06),
-            blurRadius: dark ? 14 : 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  // ============================================
-  // MINI TILE
-  // ============================================
-
-  Widget _tile(IconData icon, String title, String subtitle) {
-    return ListTile(
-      leading: Icon(icon, size: 28),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-      subtitle: Text(subtitle),
-      trailing: const Icon(Icons.chevron_right),
-    );
-  }
-
-  // ============================================
-  // DIVIDER
-  // ============================================
-
-  Widget _divider(ThemeController t) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 1,
-      color: t.isDark ? Colors.white12 : Colors.grey.shade300,
-    );
-  }
-
-  // ============================================
-  // ACCENT COLOR PICKER
-  // ============================================
-
-  void _showColorPicker(BuildContext context) {
-    final theme = Provider.of<ThemeController>(context, listen: false);
-
-    final colors = [
-      Colors.blue,
-      Colors.red,
-      Colors.green,
-      Colors.orange,
-      Colors.purple,
-      Colors.pink,
-      Colors.teal,
-      Colors.amber,
-      Colors.cyan,
-      Colors.indigo,
-    ];
-
-    showDialog(
-      context: context,
-      builder: (c) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: theme.isDark ? const Color(0xFF1E1E1E) : Colors.white,
-              borderRadius: BorderRadius.circular(18),
+      childrenPadding: const EdgeInsets.only(left: 20, right: 16, bottom: 12),
+      children: items
+          .map(
+            (e) => ListTile(
+              title: Text(e, style: TextStyle(color: scheme.onSurface)),
+              contentPadding: EdgeInsets.zero,
+              trailing: Icon(Icons.arrow_forward_ios_rounded,
+                  size: 16, color: scheme.onSurface.withValues(alpha: 0.5)),
+              onTap: () {},
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text("Pick Accent Color",
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: theme.isDark ? Colors.white : Colors.black)),
-                const SizedBox(height: 20),
-
-                Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
-                  children: colors
-                      .map((color) => GestureDetector(
-                            onTap: () {
-                              theme.setAccentColor(color);
-                              Navigator.pop(context);
-                            },
-                            child: CircleAvatar(
-                              radius: 22,
-                              backgroundColor: color,
-                              child: theme.accentColor == color
-                                  ? const Icon(Icons.check, color: Colors.white)
-                                  : null,
-                            ),
-                          ))
-                      .toList(),
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        );
-      },
+          )
+          .toList(),
     );
   }
 }

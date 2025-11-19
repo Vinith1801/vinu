@@ -7,14 +7,15 @@ class Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final accent = Theme.of(context).colorScheme.primary;
+    final scheme = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       child: Row(
         children: [
-          // Title + underline
+          // --------------------
+          // App Title
+          // --------------------
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -24,7 +25,7 @@ class Header extends StatelessWidget {
                   fontSize: 28,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.4,
-                  color: isDark ? Colors.white : Colors.black,
+                  color: scheme.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
@@ -32,7 +33,7 @@ class Header extends StatelessWidget {
                 height: 4,
                 width: 40,
                 decoration: BoxDecoration(
-                  color: accent,
+                  color: scheme.primary,
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
@@ -41,8 +42,10 @@ class Header extends StatelessWidget {
 
           const Spacer(),
 
-          // Search button
-          _glassBtn(
+          // --------------------
+          // Search Button
+          // --------------------
+          _roundedButton(
             context,
             icon: Icons.search_rounded,
             onTap: () {
@@ -50,8 +53,8 @@ class Header extends StatelessWidget {
                 context,
                 PageRouteBuilder(
                   transitionDuration: const Duration(milliseconds: 220),
-                  pageBuilder: (_, __, ___) => const SearchScreen(),
-                  transitionsBuilder: (_, anim, __, child) =>
+                  pageBuilder: (_, _, _) => const SearchScreen(),
+                  transitionsBuilder: (_, anim, _, child) =>
                       FadeTransition(opacity: anim, child: child),
                 ),
               );
@@ -60,8 +63,10 @@ class Header extends StatelessWidget {
 
           const SizedBox(width: 12),
 
-          // Settings
-          _glassBtn(
+          // --------------------
+          // Settings Button
+          // --------------------
+          _roundedButton(
             context,
             icon: Icons.settings_rounded,
             onTap: () {
@@ -69,8 +74,8 @@ class Header extends StatelessWidget {
                 context,
                 PageRouteBuilder(
                   transitionDuration: const Duration(milliseconds: 220),
-                  pageBuilder: (_, __, ___) => const SettingsScreen(),
-                  transitionsBuilder: (_, anim, __, child) =>
+                  pageBuilder: (_, _, _) => const SettingsScreen(),
+                  transitionsBuilder: (_, anim, _, child) =>
                       FadeTransition(opacity: anim, child: child),
                 ),
               );
@@ -81,9 +86,15 @@ class Header extends StatelessWidget {
     );
   }
 
-  Widget _glassBtn(BuildContext context,
-      {required IconData icon, required VoidCallback onTap}) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  // --------------------------------------------------------
+  // Reusable Rounded Button
+  // --------------------------------------------------------
+  Widget _roundedButton(
+    BuildContext context, {
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
 
     return InkWell(
       onTap: onTap,
@@ -91,21 +102,23 @@ class Header extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.07) : Colors.white,
+          color: scheme.surfaceContainerHighest.withValues(
+            alpha: scheme.brightness == Brightness.dark ? 0.2 : 0.7,
+          ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
-            if (!isDark)
+            if (scheme.brightness == Brightness.light)
               BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
               ),
           ],
         ),
         child: Icon(
           icon,
           size: 24,
-          color: isDark ? Colors.white : Colors.black,
+          color: scheme.onSurface,
         ),
       ),
     );

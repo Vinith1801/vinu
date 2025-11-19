@@ -26,10 +26,9 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
   Future<void> loadSongsFromFolder() async {
     final allSongs = await _audioQuery.querySongs();
 
-    folderSongs = allSongs.where((s) {
-      // More accurate folder detection
-      return s.data.startsWith(widget.folderPath);
-    }).toList();
+    folderSongs = allSongs
+        .where((s) => s.data.startsWith(widget.folderPath))
+        .toList();
 
     folderSongs.sort((a, b) => a.title.compareTo(b.title));
 
@@ -38,32 +37,41 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     final controller = context.read<AudioPlayerController>();
+
     final folderName = widget.folderPath.split("/").last;
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade100,
+      backgroundColor: scheme.surface,
 
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
+        backgroundColor: scheme.surface,
+        foregroundColor: scheme.onSurface,
         title: Text(
           folderName,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
+            color: scheme.onSurface,
             fontWeight: FontWeight.w700,
           ),
         ),
       ),
 
       body: folderSongs.isEmpty
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: CircularProgressIndicator(
+                color: scheme.primary,
+              ),
+            )
           : Column(
               children: [
                 const SizedBox(height: 10),
 
-                // PLAY ALL BUTTON
+                // -----------------------------------------
+                // PLAY ALL BUTTON (Dynamic Accent)
+                // -----------------------------------------
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: SizedBox(
@@ -71,7 +79,7 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
-                        backgroundColor: Colors.black,
+                        backgroundColor: scheme.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -82,14 +90,19 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Icon(Icons.play_arrow_rounded, size: 28),
-                          SizedBox(width: 8),
+                        children: [
+                          Icon(
+                            Icons.play_arrow_rounded,
+                            size: 28,
+                            color: scheme.onPrimary,
+                          ),
+                          const SizedBox(width: 8),
                           Text(
                             "Play All",
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
+                              color: scheme.onPrimary,
                             ),
                           ),
                         ],
@@ -100,12 +113,14 @@ class _FolderSongsScreenState extends State<FolderSongsScreen> {
 
                 const SizedBox(height: 16),
 
-                // SONG LIST (NO EXTRA CARDS)
+                // -----------------------------------------
+                // SONG LIST
+                // -----------------------------------------
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 10),
                     itemCount: folderSongs.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
                     itemBuilder: (_, i) {
                       final s = folderSongs[i];
 

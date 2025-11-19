@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'player/audio_player_controller.dart';
+import 'player/favorites_controller.dart';
 import 'theme/theme_controller.dart';
 import 'ui/screens/home_screen.dart';
 import 'ui/widgets/mini_player.dart';
-import 'player/favorites_controller.dart';
 
 void main() {
   runApp(
@@ -24,8 +24,8 @@ class VinuMusicApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Theme updates should rebuild the MaterialApp → use watch()
     final theme = context.watch<ThemeController>();
+    final colors = theme.current;
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -33,15 +33,28 @@ class VinuMusicApp extends StatelessWidget {
 
       theme: ThemeData(
         brightness: Brightness.light,
-        primaryColor: theme.accentColor,
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colors.primary,
+          primary: colors.primary,
+          secondary: colors.secondary,
+          surface: colors.background,
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: colors.background,
       ),
 
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        primaryColor: theme.accentColor,
-        scaffoldBackgroundColor: Colors.black,
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: colors.primary,
+          primary: colors.primary,
+          secondary: colors.secondary,
+          surface: Colors.black,
+          brightness: Brightness.dark,
+        ),
+        scaffoldBackgroundColor: Colors.black,
       ),
 
       home: const Scaffold(

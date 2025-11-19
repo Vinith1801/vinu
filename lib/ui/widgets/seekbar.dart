@@ -14,34 +14,45 @@ class SeekBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     final pos = position.inMilliseconds.toDouble();
     final dur = duration.inMilliseconds.toDouble();
-
-    final theme = Theme.of(context);
-    final sliderValue = pos.clamp(0, dur).toDouble();
+    final sliderValue = pos.clamp(0, dur > 0 ? dur : 1).toDouble();
 
     return Column(
       children: [
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 4,
-            inactiveTrackColor: Colors.grey.shade300,
-            activeTrackColor: theme.colorScheme.primary,
+
+            // THEMED TRACK COLORS
+            activeTrackColor: scheme.primary,
+            inactiveTrackColor: scheme.onSurfaceVariant.withValues(alpha: 0.3),
+
+            // THEMED THUMB
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-            thumbColor: theme.colorScheme.primary,
-            overlayColor: theme.colorScheme.primary.withOpacity(0.2),
+            thumbColor: scheme.primary,
+
+            // THEMED OVERLAY
+            overlayColor: scheme.primary.withValues(alpha: 0.2),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+
+            // Remove value indicator for clean music player UI
+            valueIndicatorColor: Colors.transparent,
+            valueIndicatorTextStyle: const TextStyle(fontSize: 0),
           ),
           child: Slider(
-                min: 0,
-                max: dur > 0 ? dur : 1,
-                value: sliderValue,
-                onChanged: (_) {},
-                onChangeEnd: (value) =>
-                    onChangeEnd(Duration(milliseconds: value.toInt())),
-              )
+            min: 0,
+            max: dur > 0 ? dur : 1,
+            value: sliderValue,
+            onChanged: (_) {},
+            onChangeEnd: (value) =>
+                onChangeEnd(Duration(milliseconds: value.toInt())),
+          ),
         ),
 
+        // TIME LABELS
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
@@ -51,7 +62,7 @@ class SeekBar extends StatelessWidget {
                 _format(position),
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade600,
+                  color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -59,7 +70,7 @@ class SeekBar extends StatelessWidget {
                 _format(duration),
                 style: TextStyle(
                   fontSize: 13,
-                  color: Colors.grey.shade600,
+                  color: scheme.onSurfaceVariant,
                   fontWeight: FontWeight.w600,
                 ),
               ),
