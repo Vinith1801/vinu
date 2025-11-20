@@ -463,75 +463,115 @@ class _MiniPlayerState extends State<MiniPlayer>
   }
 
   // ------------------ Vinyl Disc ------------------
-  Widget _buildVinylDisc(int id, ColorScheme scheme) {
-    const double size = 300;
-    const double artSize = 200;
-    final grooveColor = scheme.onSurface.withValues(alpha: 0.08);
+Widget _buildVinylDisc(int id, ColorScheme scheme) {
+  const double size = 300;
+  const double artSize = 180;
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Container(
+  return SizedBox(
+    width: size,
+    height: size,
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        // ---------------------------
+        // BLACK BASE
+        // ---------------------------
+        Container(
+          width: size,
+          height: size,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black,
+          ),
+        ),
+
+        // ---------------------------
+        // 4 CIRCULAR GROOVES
+        // ---------------------------
+        ...List.generate(
+          4,
+          (i) {
+            final radius = size - (i * 32);
+            return Container(
+              width: radius,
+              height: radius,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.08),
+                  width: 1,
+                ),
+              ),
+            );
+          },
+        ),
+
+        // ---------------------------
+        // GLOSSY REFLECTION SWEEP ARC
+        // ---------------------------
+        Transform.rotate(
+          angle: -0.4, // small tilt makes it look real
+          child: Container(
             width: size,
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: scheme.surfaceContainerHighest.withValues(alpha: 0.35),
-            ),
-          ),
-
-          // Grooves
-          ...List.generate(
-            12,
-            (i) {
-              final val = size - 10 - (i * 10);
-              return Container(
-                width: val,
-                height: val,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: grooveColor,
-                    width: 0.5,
-                  ),
-                ),
-              );
-            },
-          ),
-
-          ClipOval(
-            child: QueryArtworkWidget(
-              id: id,
-              type: ArtworkType.AUDIO,
-              artworkHeight: artSize,
-              artworkWidth: artSize,
-              nullArtworkWidget: Container(
-                width: artSize,
-                height: artSize,
-                color: scheme.onSurface.withValues(alpha: 0.2),
-                child: Icon(Icons.music_note,
-                    size: 60, color: scheme.onSurface),
+              gradient: SweepGradient(
+                startAngle: 0,
+                endAngle: 6.28,
+                colors: [
+                  Colors.white.withOpacity(0.23), // bright shine
+                  Colors.transparent,
+                  Colors.transparent,
+                  Colors.white.withOpacity(0.23),
+                ],
+                stops: const [0.0, 0.18, 0.82, 1.0],
               ),
             ),
           ),
+        ),
 
-          Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: scheme.surface,
-              border:
-                  Border.all(color: scheme.onSurface, width: 1.4),
+        // ---------------------------
+        // CENTER ARTWORK
+        // ---------------------------
+        ClipOval(
+          child: QueryArtworkWidget(
+            id: id,
+            type: ArtworkType.AUDIO,
+            artworkHeight: artSize,
+            artworkWidth: artSize,
+            nullArtworkWidget: Container(
+              width: artSize,
+              height: artSize,
+              color: Colors.grey.shade900,
+              child: Icon(
+                Icons.music_note,
+                size: 60,
+                color: Colors.white.withOpacity(0.7),
+              ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        // ---------------------------
+        // VINYL CENTER CAP
+        // ---------------------------
+        Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white,
+            border: Border.all(
+              color: Colors.black,
+              width: 2,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // ------------------ Tonearm ------------------
   Widget _buildTonearm(ColorScheme scheme) {
