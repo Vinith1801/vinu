@@ -165,7 +165,7 @@ class _FavoriteButton extends StatelessWidget {
 
     return Selector<FavoritesController, bool>(
       selector: (_, fav) => fav.isFavorite(songId),
-      builder: (_, isFav, __) {
+      builder: (_, isFav, _) {
         return GestureDetector(
           onTap: () => context.read<FavoritesController>().toggleFavorite(songId),
           child: AnimatedSwitcher(
@@ -174,7 +174,7 @@ class _FavoriteButton extends StatelessWidget {
             child: Icon(
               isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
               key: ValueKey(isFav),
-              color: isFav ? scheme.primary : scheme.onSurfaceVariant.withOpacity(0.6),
+              color: isFav ? scheme.primary : scheme.onSurfaceVariant.withValues(alpha:0.6),
               size: 26,
             ),
           ),

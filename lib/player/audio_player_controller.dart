@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -8,7 +9,6 @@ import 'package:audio_session/audio_session.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
-/// Immutable snapshot used in UI
 class PositionData {
   final Duration position;
   final Duration bufferedPosition;
@@ -31,67 +31,66 @@ class AudioPlayerController extends ChangeNotifier {
 
   int currentIndex = 0;
 
-  // Shuffle & Repeat
   bool isShuffling = false;
   LoopMode loopMode = LoopMode.off;
 
-  // Position stream merge (keeps a lightweight controller)
-  StreamController<PositionData>? _posDataCtrl;
+  StreamController<PositionData>? _posCtrl;
   Duration _pos = Duration.zero;
   Duration _buff = Duration.zero;
   Duration _dur = Duration.zero;
+
   StreamSubscription? _posSub;
   StreamSubscription? _buffSub;
   StreamSubscription? _durSub;
   StreamSubscription? _indexSub;
 
-  // OnAudioQuery instance (reused)
   final OnAudioQuery _audioQuery = OnAudioQuery();
 
   AudioPlayerController() {
     _init();
   }
 
+  // ---------------------------------------------------------
+  // INIT
+  // ---------------------------------------------------------
   Future<void> _init() async {
-    // Configure audio session
     try {
       final session = await AudioSession.instance;
       await session.configure(const AudioSessionConfiguration.music());
     } catch (_) {}
 
-    // prepare art directory
     _artDir = await _getArtDirectory();
 
-    // Track index changes
     _indexSub = player.currentIndexStream.listen((index) {
       if (index == null) return;
       currentIndex = index;
       notifyListeners();
     });
-
-    // Create position stream merge lazily later when requested
   }
 
   // ---------------------------------------------------------
   // GETTERS
   // ---------------------------------------------------------
-  SongModel? get currentSong => playlist.isEmpty ? null : playlist[currentIndex];
+  SongModel? get currentSong =>
+      playlist.isEmpty ? null : playlist[currentIndex];
+
   int? get currentSongId => currentSong?.id;
   bool get isPlaying => player.playing;
+
   Stream<bool> get playingStream => player.playingStream;
 
   // ---------------------------------------------------------
-  // POSITION STREAM MERGE
+  // POSITION STREAM
   // ---------------------------------------------------------
   Stream<PositionData> get positionDataStream {
     _ensurePositionStream();
-    return _posDataCtrl!.stream;
+    return _posCtrl!.stream;
   }
 
   void _ensurePositionStream() {
-    if (_posDataCtrl != null) return;
+    if (_posCtrl != null) return;
 
-    _posDataCtrl = StreamController<PositionData>.broadcast();
+    _posCtrl = StreamController<PositionData>.broadcast();
 
     _posSub = player.positionStream.listen((p) {
       _pos = p;
@@ -110,16 +109,24 @@ class AudioPlayerController extends ChangeNotifier {
   }
 
   void _emitData() {
-    if (_posDataCtrl == null || _posDataCtrl!.isClosed) return;
-    _posDataCtrl!.add(PositionData(position: _pos, bufferedPosition: _buff, duration: _dur));
+    if (_posCtrl == null || _posCtrl!.isClosed) return;
+
+    _posCtrl!.add(
+      PositionData(
+        position: _pos,
+        bufferedPosition: _buff,
+        duration: _dur,
+      ),
+    );
   }
+
   // ---------------------------------------------------------
   // ARTWORK CACHING
   // ---------------------------------------------------------
-
   Future<Directory> _getArtDirectory() async {
     final appDir = await getApplicationSupportDirectory();
     final dir = Directory(p.join(appDir.path, 'artwork_cache'));
+
     if (!await dir.exists()) {
       try {
         await dir.create(recursive: true);
@@ -128,27 +135,22 @@ class AudioPlayerController extends ChangeNotifier {
     return dir;
   }
 
-  Uri? getCachedArtworkUri(int songId) {
-    // synchronous fast hit (may be null)
-    return _artCache[songId];
-  }
+  Uri? getCachedArtworkUri(int id) => _artCache[id];
 
   Future<Uri?> ensureArtworkForId(int songId) async {
-    // quick in-memory hit
-    if (_artCache.containsKey(songId)) return _artCache[songId];
+    if (_artCache.containsKey(songId)) {
+      return _artCache[songId];
+    }
 
-    // ensure art dir ready
     _artDir ??= await _getArtDirectory();
-    final targetFile = File(p.join(_artDir!.path, '${songId}_art.jpg'));
+    final file = File(p.join(_artDir!.path, '${songId}_art.jpg'));
 
-    // if file already exists on disk, use it
-    if (await targetFile.exists()) {
-      final uri = Uri.file(targetFile.path);
+    if (await file.exists()) {
+      final uri = Uri.file(file.path);
       _artCache[songId] = uri;
       return uri;
     }
 
-    // query artwork bytes (this is the expensive part; only happens once per song)
     try {
       final bytes = await _audioQuery.queryArtwork(songId, ArtworkType.AUDIO);
       if (bytes == null) {
@@ -156,19 +158,18 @@ class AudioPlayerController extends ChangeNotifier {
         return null;
       }
 
-      await targetFile.writeAsBytes(bytes, flush: true);
-      final uri = Uri.file(targetFile.path);
+      await file.writeAsBytes(bytes, flush: true);
+      final uri = Uri.file(file.path);
       _artCache[songId] = uri;
       return uri;
-    } catch (e) {
-      // on any failure, cache null to avoid repeated failing attempts
+    } catch (_) {
       _artCache[songId] = null;
       return null;
     }
   }
 
   // ---------------------------------------------------------
-  // SET PLAYLIST (non-blocking, optimized)
+  // PLAYLIST SETTER — ***FAST, NON-BLOCKING VERSION***
   // ---------------------------------------------------------
   Future<void> setPlaylist(
     List<SongModel> songs, {
@@ -176,6 +177,7 @@ class AudioPlayerController extends ChangeNotifier {
   }) async {
     if (songs.isEmpty) return;
 
+    // Fast path
     if (_samePlaylistById(playlist, songs)) {
       _rebuildIdLookup(songs);
       await playIndex(initialIndex);
@@ -185,44 +187,51 @@ class AudioPlayerController extends ChangeNotifier {
     playlist = List<SongModel>.from(songs);
     _rebuildIdLookup(playlist);
 
-    final children = <AudioSource>[];
+    final sources = <AudioSource>[];
 
-    for (final s in playlist) {
-      // Get or build the artwork first
-      final artUri = await ensureArtworkForId(s.id);
+    // Only use cached artwork here — DO NOT await artwork
+    for (final song in playlist) {
+      final artUri = await ensureArtworkForId(song.id);
 
-      final mediaItem = MediaItem(
-        id: s.id.toString(),
-        title: s.title,
-        album: s.album ?? '',
-        artist: s.artist ?? '',
+      final media = MediaItem(
+        id: song.id.toString(),
+        title: song.title,
+        album: song.album ?? '',
+        artist: song.artist ?? '',
         artUri: artUri,
-        extras: {'uri': s.data},
+        extras: {'uri': song.data},
       );
 
-      children.add(
+      sources.add(
         AudioSource.uri(
-          Uri.file(s.data),
-          tag: mediaItem,
+          Uri.file(song.data),
+          tag: media,
         ),
       );
     }
 
-    final concat = ConcatenatingAudioSource(children: children);
-
-    await player.setAudioSource(
-      concat,
+    // Instantly set playlist & start playback — NO WAITING
+    await player.setAudioSources(
+      sources,
       initialIndex: initialIndex,
       initialPosition: Duration.zero,
     );
 
-    try {
-      await player.setSpeed(1.0);
-    } catch (_) {}
-
     currentIndex = initialIndex;
     notifyListeners();
     await player.play();
+
+    // Background artwork population (non-blocking)
+    unawaited(_populateArtworkCache(playlist));
+  }
+
+  Future<void> _populateArtworkCache(List<SongModel> list) async {
+    for (final s in list) {
+      if (_artCache.containsKey(s.id)) continue;
+      try {
+        await ensureArtworkForId(s.id);
+      } catch (_) {}
+    }
   }
 
   bool _samePlaylistById(List<SongModel> a, List<SongModel> b) {
@@ -235,14 +244,17 @@ class AudioPlayerController extends ChangeNotifier {
 
   void _rebuildIdLookup(List<SongModel> list) {
     _idToIndex.clear();
-    for (int i = 0; i < list.length; i++) _idToIndex[list[i].id] = i;
+    for (int i = 0; i < list.length; i++) {
+      _idToIndex[list[i].id] = i;
+    }
   }
 
   // ---------------------------------------------------------
-  // PLAY SPECIFIC TRACK (INSTANT)
+  // PLAYBACK CONTROL
   // ---------------------------------------------------------
   Future<void> playIndex(int index) async {
     if (index < 0 || index >= playlist.length) return;
+
     currentIndex = index;
     await player.seek(Duration.zero, index: index);
     await player.play();
@@ -250,19 +262,26 @@ class AudioPlayerController extends ChangeNotifier {
 
   Future<void> playSong(SongModel song) async {
     final idx = _idToIndex[song.id];
-    if (idx != null) await playIndex(idx);
+    if (idx != null) {
+      await playIndex(idx);
+    }
   }
 
-  // ---------------------------------------------------------
-  // CONTROLS
-  // ---------------------------------------------------------
   void togglePlayPause() {
-    player.playing ? player.pause() : player.play();
+    if (player.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
   }
 
   void next() => player.seekToNext();
+
   void previous() => player.seekToPrevious();
-  Future<void> seek(Duration position) async => player.seek(position);
+
+  Future<void> seek(Duration pos) async {
+    await player.seek(pos);
+  }
 
   Future<void> setPlaybackSpeed(double speed) async {
     final s = speed.clamp(0.25, 3.0);
@@ -303,7 +322,7 @@ class AudioPlayerController extends ChangeNotifier {
     _buffSub?.cancel();
     _durSub?.cancel();
     _indexSub?.cancel();
-    _posDataCtrl?.close();
+    _posCtrl?.close();
     player.dispose();
     super.dispose();
   }

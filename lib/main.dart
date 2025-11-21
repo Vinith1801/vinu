@@ -36,55 +36,59 @@ class VinuMusicApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<ThemeController>();
-    final colors = theme.current;
+    final themeController = context.read<ThemeController>();
 
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
+    return AnimatedBuilder(
+      animation: themeController,
+      builder: (_, __) {
+        final colors = themeController.current;
 
-      // -------- LIGHT THEME --------
-      theme: ThemeData(
-        brightness: Brightness.light,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: colors.primary,
-          primary: colors.primary,
-          secondary: colors.secondary,
-          surface: colors.background,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: colors.background,
-      ),
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
+          themeMode:
+              themeController.isDark ? ThemeMode.dark : ThemeMode.light,
 
-      // -------- DARK THEME --------
-      darkTheme: ThemeData(
-        brightness: Brightness.dark,
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: colors.primary,
-          primary: colors.primary,
-          secondary: colors.secondary,
-          surface: Colors.black,
-          brightness: Brightness.dark,
-        ),
-        scaffoldBackgroundColor: Colors.black,
-      ),
-
-      // -------- HOME --------
-      home: const Scaffold(
-        body: Stack(
-          children: [
-            HomeScreen(),
-
-            // Mini player always fixed at bottom
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: MiniPlayer(),
+          // -------- LIGHT THEME --------
+          theme: ThemeData(
+            brightness: Brightness.light,
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: colors.primary,
+              primary: colors.primary,
+              secondary: colors.secondary,
+              surface: colors.background,
+              brightness: Brightness.light,
             ),
-          ],
-        ),
-      ),
+            scaffoldBackgroundColor: colors.background,
+          ),
+
+          // -------- DARK THEME --------
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            useMaterial3: true,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: colors.primary,
+              primary: colors.primary,
+              secondary: colors.secondary,
+              surface: Colors.black,
+              brightness: Brightness.dark,
+            ),
+            scaffoldBackgroundColor: Colors.black,
+          ),
+
+          home: const Scaffold(
+            body: Stack(
+              children: [
+                HomeScreen(),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: MiniPlayer(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

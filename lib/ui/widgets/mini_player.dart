@@ -211,7 +211,7 @@ class _MiniPlayerState extends State<MiniPlayer>
           heightNotifier.value = collapsedHeight;
         } else {
           final mid = collapsedHeight +
-              (expandedHeight - collapsedHeight) * 0.45;
+              (expandedHeight - collapsedHeight) * 0.85;
           if (heightNotifier.value > mid) {
             _snapTo(expandedHeight);
             heightNotifier.value = expandedHeight;
@@ -226,7 +226,7 @@ class _MiniPlayerState extends State<MiniPlayer>
         final v = details.primaryVelocity ?? 0;
         if (v < -600) {
           controller.next();
-        } else if (v > 600) controller.previous();
+        } else if (v > 600) {controller.previous();}
       },
       child: ValueListenableBuilder<double>(
         valueListenable: heightNotifier,
@@ -377,7 +377,6 @@ class _MiniPlayerState extends State<MiniPlayer>
                               rotateCtrl.stop();
                               tonearmCtrl.reverse();
                             }
-
                             return RotationTransition(
                               turns: rotateCtrl,
                               child: _vinylArtwork!,
@@ -498,7 +497,7 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.08),
+                  color: Colors.white.withValues(alpha:0.08),
                   width: 1,
                 ),
               ),
@@ -520,10 +519,10 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
                 startAngle: 0,
                 endAngle: 6.28,
                 colors: [
-                  Colors.white.withOpacity(0.23), // bright shine
+                  Colors.white.withValues(alpha:0.23), // bright shine
                   Colors.transparent,
                   Colors.transparent,
-                  Colors.white.withOpacity(0.23),
+                  Colors.white.withValues(alpha:0.23),
                 ],
                 stops: const [0.0, 0.18, 0.82, 1.0],
               ),
@@ -547,7 +546,7 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
               child: Icon(
                 Icons.music_note,
                 size: 60,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha:0.7),
               ),
             ),
           ),
