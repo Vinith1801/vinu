@@ -1,3 +1,4 @@
+//lib/ui/widgets/seekbar.dart
 import 'package:flutter/material.dart';
 
 class SeekBar extends StatelessWidget {

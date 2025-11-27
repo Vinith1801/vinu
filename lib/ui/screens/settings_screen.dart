@@ -136,19 +136,19 @@ class _AppearanceCardState extends State<_AppearanceCard> {
                       color: Theme.of(context).colorScheme.surface,
                       border: Border.all(
                         width: selected ? 3 : 1,
-                        color: selected ? set.primary : Theme.of(context).colorScheme.outline.withOpacity(0.06),
+                        color: selected ? set.primary : Theme.of(context).colorScheme.outline.withValues(alpha: 0.06),
                       ),
                       boxShadow: selected
                           ? [
                               BoxShadow(
-                                color: set.primary.withOpacity(0.16),
+                                color: set.primary.withValues(alpha: 0.16),
                                 blurRadius: 14,
                                 offset: const Offset(0, 6),
                               ),
                             ]
                           : [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
+                                color: Colors.black.withValues(alpha: 0.03),
                                 blurRadius: 6,
                                 offset: const Offset(0, 3),
                               ),
@@ -167,7 +167,7 @@ class _AppearanceCardState extends State<_AppearanceCard> {
                                 LinearGradient(colors: [set.primary, set.secondary]),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -340,10 +340,10 @@ class _CardContainer extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: scheme.outline.withOpacity(0.04)),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.04)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 6),
           )
@@ -442,7 +442,7 @@ class _RadioButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? scheme.primary : scheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? scheme.primary : scheme.outline.withOpacity(0.06)),
+          border: Border.all(color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06)),
         ),
         child: Text(
           label,

@@ -1,3 +1,4 @@
+//lib/ui/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';

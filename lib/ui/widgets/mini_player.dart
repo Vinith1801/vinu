@@ -1,3 +1,4 @@
+//lib/ui/widgets/mini_player.dart
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -328,7 +329,6 @@ class _MiniPlayerState extends State<MiniPlayer>
   //                      FULL UI
   // ----------------------------------------------------------
   Widget _full(AudioPlayerController c, ColorScheme scheme) {
-
     return StreamBuilder<PositionData>(
       stream: c.positionDataStream,
       builder: (_, snap) {
@@ -336,135 +336,149 @@ class _MiniPlayerState extends State<MiniPlayer>
         final duration = snap.data?.duration ?? Duration.zero;
         final song = c.currentSong!;
 
-        return Stack(
-          children: [
-            Positioned.fill(child: _background(scheme)),
-
-            Column(
-              children: [
-                const SizedBox(height: 6),
-
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: Icon(Icons.keyboard_arrow_down_rounded,
-                        size: 32, color: scheme.onSurface),
-                    onPressed: () {
-                      _snapTo(collapsedHeight);
-                      heightNotifier.value = collapsedHeight;
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                SizedBox(
-                  width: 300,
-                  height: 300,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Center(
-                        child: Selector<AudioPlayerController, bool>(
-                          selector: (_, c) => c.isPlaying,
-                          builder: (_, isPlaying, _) {
-                            if (isPlaying) {
-                              if (!rotateCtrl.isAnimating) {
-                                rotateCtrl.repeat();
-                              }
-                              tonearmCtrl.forward();
-                            } else {
-                              rotateCtrl.stop();
-                              tonearmCtrl.reverse();
-                            }
-                            return RotationTransition(
-                              turns: rotateCtrl,
-                              child: _vinylArtwork!,
-                            );
-                          },
-                        ),
-                      ),
-
-                      Positioned(
-                        right: -12,
-                        top: -12,
-                        child: AnimatedBuilder(
-                          animation: tonearmCtrl,
-                          builder: (_, child) {
-                            return Transform.rotate(
-                              angle: -0.6 + tonearmCtrl.value * 0.55,
-                              alignment: Alignment.topLeft,
-                              child: child,
-                            );
-                          },
-                          child: _buildTonearm(scheme),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-                Text(song.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 24,
-                        color: scheme.onSurface)),
-                const SizedBox(height: 6),
-                Text(song.artist ?? "Unknown Artist",
-                    style: TextStyle(
-                        fontSize: 16, color: scheme.onSurfaceVariant)),
-                const SizedBox(height: 28),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: SeekBar(
-                    position: position,
-                    duration: duration,
-                    onChangeEnd: c.seek,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                _controls(c, scheme),
-
-                const Spacer(),
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 22),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                scheme.surface,
+                scheme.surfaceContainerHighest.withValues(alpha: 0.4),
               ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-          ],
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 6),
+
+              // Collapse arrow
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  icon: Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 30, color: scheme.onSurface),
+                  onPressed: () {
+                    _snapTo(collapsedHeight);
+                    heightNotifier.value = collapsedHeight;
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 4),
+
+              // Title + Artist
+              Text(song.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22,
+                      color: scheme.onSurface)
+                      ),
+
+              const SizedBox(height: 4),
+
+              Text(song.artist ?? "Unknown Artist",
+                  style: TextStyle(fontSize: 15, color: scheme.onSurfaceVariant)),
+              const SizedBox(height: 14),
+              const SizedBox(height: 26),
+
+              // Vinyl + tonearm
+              SizedBox(
+                width: 320,
+                height: 320,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Center(
+                      child: Selector<AudioPlayerController, bool>(
+                        selector: (_, c) => c.isPlaying,
+                        builder: (_, isPlaying, _) {
+                          if (isPlaying) {
+                            if (!rotateCtrl.isAnimating) rotateCtrl.repeat();
+                            tonearmCtrl.forward();
+                          } else {
+                            rotateCtrl.stop();
+                            tonearmCtrl.reverse();
+                          }
+
+                          return RotationTransition(
+                            turns: rotateCtrl,
+                            child: _vinylArtwork!,
+                          );
+                        },
+                      ),
+                    ),
+
+                    // Tonearm on right side like screenshot
+                    Positioned(
+                      right: -18,
+                      top: -18,
+                      child: AnimatedBuilder(
+                        animation: tonearmCtrl,
+                        builder: (_, child) {
+                          return Transform.rotate(
+                            angle: -0.6 + tonearmCtrl.value * 0.55,
+                            alignment: Alignment.topLeft,
+                            child: child,
+                          );
+                        },
+                        child: _buildTonearm(scheme),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // Seekbar
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: SeekBar(
+                  position: position,
+                  duration: duration,
+                  onChangeEnd: c.seek,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Player controls row (simple)
+              _controls(c, scheme),
+
+              const SizedBox(height: 20),
+
+              // Bottom row: favorite, delete, share, more
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border_rounded,
+                      size: 26, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 32),
+                  Icon(Icons.delete_outline_rounded,
+                      size: 26, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 32),
+                  Icon(Icons.share_rounded,
+                      size: 26, color: scheme.onSurfaceVariant),
+                  const SizedBox(width: 32),
+                  Icon(Icons.more_vert_rounded,
+                      size: 26, color: scheme.onSurfaceVariant),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
         );
       },
-    );
-  }
-
-  // ------------------ Full Background ------------------
-  Widget _background(ColorScheme scheme) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: scheme.brightness == Brightness.dark
-            ? RadialGradient(
-                center: Alignment.topCenter,
-                radius: 1.2,
-                colors: [
-                  scheme.surface,
-                  scheme.surfaceContainerHighest,
-                ],
-              )
-            : LinearGradient(
-                colors: [scheme.surface, scheme.surfaceContainerHighest],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-      ),
     );
   }
 
   // ------------------ Vinyl Disc ------------------
 Widget _buildVinylDisc(int id, ColorScheme scheme) {
   const double size = 300;
-  const double artSize = 180;
+  const double artSize = 220;
 
   return SizedBox(
     width: size,
