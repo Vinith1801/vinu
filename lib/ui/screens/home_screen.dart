@@ -1,9 +1,11 @@
-// lib/ui/screens/home_screen.dart
+//lib/ui/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:provider/provider.dart';
+import '../../player/library_visibility_controller.dart';
 import '../widgets/header.dart';
 
-// tab widgets
+// tabs
 import 'home/tabs/songs_tab.dart';
 import 'home/tabs/favorites_tab.dart';
 import 'home/tabs/playlists_tab.dart';
@@ -19,7 +21,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final OnAudioQuery _audioQuery = OnAudioQuery();
 
   List<SongModel> songs = [];
@@ -27,14 +29,20 @@ class _HomeScreenState extends State<HomeScreen>
   List<AlbumModel> albums = [];
   List<String> folders = [];
 
-  late TabController tabController;
+  TabController? _tabController;
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    tabController = TabController(length: 6, vsync: this);
     loadData();
+  }
+
+  // Create new TAB CONTROLLER anytime visibility changes
+  void _rebuildTabs(List<String> tabs) {
+    _tabController?.dispose();
+    _tabController = TabController(length: tabs.length, vsync: this);
+    setState(() {});
   }
 
   Future<void> loadData() async {
@@ -46,36 +54,68 @@ class _HomeScreenState extends State<HomeScreen>
         return;
       }
 
+      final visibility = context.read<LibraryVisibilityController>();
+
       final qSongs = await _audioQuery.querySongs();
       final qArtists = await _audioQuery.queryArtists();
       final qAlbums = await _audioQuery.queryAlbums();
 
-      final folderSet = <String>{};
+      // --------------------------
+      // BUILD FOLDER -> SONG COUNT
+      // --------------------------
+      final Map<String, int> folderCounts = {};
+
       for (var s in qSongs) {
-        final p = s.data.substring(0, s.data.lastIndexOf("/"));
-        folderSet.add(p);
+        final folder = s.data.substring(0, s.data.lastIndexOf("/"));
+        folderCounts[folder] = (folderCounts[folder] ?? 0) + 1;
       }
 
-      if (mounted) {
-        setState(() {
-          songs = qSongs;
-          artists = qArtists;
-          albums = qAlbums;
-          folders = folderSet.toList();
-          _loading = false;
-        });
-      }
+      // Register counts + initialize folder toggles
+      visibility.registerFolders(folderCounts);
+
+      // Filter only enabled folders
+      List<String> enabled = visibility.enabledFolders;
+
+      if (!mounted) return;
+
+      setState(() {
+        songs = qSongs;
+        artists = qArtists;
+        albums = qAlbums;
+        folders = enabled; // apply filtering
+        _loading = false;
+      });
+
     } catch (e) {
       debugPrint("Error loading media: $e");
-      if (mounted) setState(() => _loading = false);
+      if (!mounted) return;
+      setState(() => _loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final visibility = context.watch<LibraryVisibilityController>();
+    final activeTabs = visibility.activeTabs;
+
+    // Ensure TabController stays in sync
+    if (_tabController == null || _tabController!.length != activeTabs.length) {
+      _rebuildTabs(activeTabs);
+    }
+
+    if (activeTabs.isEmpty) {
+      return Center(
+        child: Text(
+          "All sections are hidden.\nEnable some in Settings.",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
+      );
+    }
+
     final scheme = Theme.of(context).colorScheme;
     final text = scheme.onSurface;
-    final muted = scheme.onSurface.withValues(alpha: 0.5);
+    final muted = text.withValues(alpha: 0.5);
 
     return SafeArea(
       child: Column(
@@ -86,24 +126,16 @@ class _HomeScreenState extends State<HomeScreen>
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: TabBar(
-              controller: tabController,
+              controller: _tabController!,
               isScrollable: true,
               labelColor: text,
               unselectedLabelColor: muted,
-              labelStyle: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600, color: text),
+              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               indicator: UnderlineTabIndicator(
                 borderSide: BorderSide(width: 3, color: scheme.primary),
                 insets: const EdgeInsets.symmetric(horizontal: 12),
               ),
-              tabs: const [
-                Tab(text: "Songs"),
-                Tab(text: "Favorites"),
-                Tab(text: "Playlists"),
-                Tab(text: "Artists"),
-                Tab(text: "Albums"),
-                Tab(text: "Folders"),
-              ],
+              tabs: activeTabs.map((t) => Tab(text: t)).toList(),
             ),
           ),
 
@@ -113,15 +145,31 @@ class _HomeScreenState extends State<HomeScreen>
               ? const Expanded(child: Center(child: CircularProgressIndicator()))
               : Expanded(
                   child: TabBarView(
-                    controller: tabController,
-                    children: [
-                      SongsTab(songs: songs),
-                      FavoritesTab(songs: songs),
-                      const PlaylistsTab(),
-                      ArtistsTab(artists: artists),
-                      AlbumsTab(albums: albums),
-                      FoldersTab(folders: folders),
-                    ],
+                    controller: _tabController!,
+                    children: activeTabs.map((t) {
+                      switch (t) {
+                        case "Songs":
+                          return SongsTab(songs: songs);
+
+                        case "Favorites":
+                          return FavoritesTab(songs: songs);
+
+                        case "Playlists":
+                          return const PlaylistsTab();
+
+                        case "Artists":
+                          return ArtistsTab(artists: artists);
+
+                        case "Albums":
+                          return AlbumsTab(albums: albums);
+
+                        case "Folders":
+                          return FoldersTab(folders: folders);
+
+                        default:
+                          return const SizedBox.shrink();
+                      }
+                    }).toList(),
                   ),
                 ),
         ],

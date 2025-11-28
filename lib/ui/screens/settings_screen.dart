@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vinu/player/library_visibility_controller.dart';
 import '../../theme/theme_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -28,7 +29,7 @@ class SettingsScreen extends StatelessWidget {
           SizedBox(height: 6),
           _AppearanceCard(),
           SizedBox(height: 12),
-          _PlayerCard(),
+          _VisibilityCard(),
           SizedBox(height: 12),
           _LibraryCard(),
           SizedBox(height: 12),
@@ -40,8 +41,9 @@ class SettingsScreen extends StatelessWidget {
   }
 }
 
-/// Appearance Card: theme mode + color set selector.
-/// Uses ThemeController (provider) to change color set and dark mode.
+////////////////////////////////////////////////////////////////////////////
+/// APPEARANCE CARD
+////////////////////////////////////////////////////////////////////////////
 class _AppearanceCard extends StatefulWidget {
   const _AppearanceCard();
 
@@ -50,13 +52,12 @@ class _AppearanceCard extends StatefulWidget {
 }
 
 class _AppearanceCardState extends State<_AppearanceCard> {
-  String _mode = 'system'; // 'system'|'light'|'dark'
+  String _mode = 'system';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final theme = context.read<ThemeController>();
-    // best-effort: map theme.isDark to local mode (no system info in controller)
     _mode = theme.isDark ? 'dark' : 'light';
   }
 
@@ -65,8 +66,6 @@ class _AppearanceCardState extends State<_AppearanceCard> {
     setState(() => _mode = mode);
 
     if (mode == 'system') {
-      // If you later add system integration, replace this with actual behavior.
-      // For now, keep "system" as toggling to light by default to avoid surprises.
       if (theme.isDark) theme.toggleDarkMode();
     } else if (mode == 'dark') {
       if (!theme.isDark) theme.toggleDarkMode();
@@ -86,33 +85,18 @@ class _AppearanceCardState extends State<_AppearanceCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Theme Mode radios
           Text('Theme mode', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 8),
           Row(
             children: [
-              _RadioButton(
-                label: 'System',
-                selected: _mode == 'system',
-                onTap: () => _applyMode('system'),
-              ),
+              _RadioButton(label: 'System', selected: _mode == 'system', onTap: () => _applyMode('system')),
               const SizedBox(width: 12),
-              _RadioButton(
-                label: 'Light',
-                selected: _mode == 'light',
-                onTap: () => _applyMode('light'),
-              ),
+              _RadioButton(label: 'Light', selected: _mode == 'light', onTap: () => _applyMode('light')),
               const SizedBox(width: 12),
-              _RadioButton(
-                label: 'Dark',
-                selected: _mode == 'dark',
-                onTap: () => _applyMode('dark'),
-              ),
+              _RadioButton(label: 'Dark', selected: _mode == 'dark', onTap: () => _applyMode('dark')),
             ],
           ),
           const SizedBox(height: 14),
-
-          // Color set selector (uses ThemeController)
           Text('Accent palettes', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 10),
           SizedBox(
@@ -120,11 +104,12 @@ class _AppearanceCardState extends State<_AppearanceCard> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: theme.colorSets.length,
-              padding: const EdgeInsets.only(left: 6, right: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               separatorBuilder: (_, __) => const SizedBox(width: 12),
               itemBuilder: (_, i) {
                 final set = theme.colorSets[i];
                 final selected = theme.selectedIndex == i;
+
                 return GestureDetector(
                   onTap: () => theme.setColorSet(i),
                   child: AnimatedContainer(
@@ -133,52 +118,26 @@ class _AppearanceCardState extends State<_AppearanceCard> {
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
-                      color: Theme.of(context).colorScheme.surface,
+                      color: scheme.surface,
                       border: Border.all(
                         width: selected ? 3 : 1,
-                        color: selected ? set.primary : Theme.of(context).colorScheme.outline.withValues(alpha: 0.06),
+                        color: selected ? set.primary : scheme.outline.withValues(alpha: 0.06),
                       ),
-                      boxShadow: selected
-                          ? [
-                              BoxShadow(
-                                color: set.primary.withValues(alpha: 0.16),
-                                blurRadius: 14,
-                                offset: const Offset(0, 6),
-                              ),
-                            ]
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.03),
-                                blurRadius: 6,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Gradient preview circle (nicer than stacked dots)
                         Container(
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: (theme.isDark ? set.gradientDark : set.gradientLight) ??
-                                LinearGradient(colors: [set.primary, set.secondary]),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.08),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+                            gradient: (theme.isDark ? set.gradientDark : set.gradientLight)
+                                ?? LinearGradient(colors: [set.primary, set.secondary]),
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Palette ${i + 1}',
-                          style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
-                        ),
+                        Text('Palette ${i + 1}', style: TextStyle(fontSize: 12, color: scheme.onSurface)),
                       ],
                     ),
                   ),
@@ -192,45 +151,109 @@ class _AppearanceCardState extends State<_AppearanceCard> {
   }
 }
 
-/// Player Card: opens Player Settings page (persisted toggles).
-class _PlayerCard extends StatelessWidget {
-  const _PlayerCard();
+////////////////////////////////////////////////////////////////////////////
+/// TAB VISIBILITY CARD + FOLDER SCAN TOGGLE
+////////////////////////////////////////////////////////////////////////////
+
+class _VisibilityCard extends StatelessWidget {
+  const _VisibilityCard();
 
   @override
   Widget build(BuildContext context) {
-    // final scheme = Theme.of(context).colorScheme;
+    final ctrl = context.watch<LibraryVisibilityController>();
+    final scheme = Theme.of(context).colorScheme;
+
+    final showFoldersUI = ctrl.visibleTabs["Folders"] == true;
+
     return _CardContainer(
-      title: 'Player',
-      subtitle: 'Playback UI & micro-behaviors',
+      title: "Library Visibility",
+      subtitle: "Home tabs and folder scanning",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _ListRow(
-            icon: Icons.music_note,
-            title: 'Player Settings',
-            subtitle: 'Animation & controls',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _PlayerSettingsScreen()),
+          ////////////////////////////////////////////////////////////////////
+          // TAB VISIBILITY
+          ////////////////////////////////////////////////////////////////////
+          Text("Home Tabs",
+              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          const SizedBox(height: 8),
+
+          ...ctrl.visibleTabs.entries.map((entry) {
+            return SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(entry.key, style: TextStyle(color: scheme.onSurface)),
+              value: entry.value,
+              onChanged: (_) => ctrl.toggleTab(entry.key),
+            );
+          }),
+
+          ////////////////////////////////////////////////////////////////////
+          // FOLDER UI DISABLED WHEN TAB HIDDEN
+          ////////////////////////////////////////////////////////////////////
+          if (!showFoldersUI) ...[
+            const SizedBox(height: 16),
+            Text(
+              "Folder scanning is hidden because the Folders tab is disabled.",
+              style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          _ListRow(
-            icon: Icons.info_outline,
-            title: 'Playback quality',
-            subtitle: 'Bitrate / resampling (if supported)',
-            onTap: () => _showNotImplemented(context),
-          ),
+            const SizedBox(height: 8),
+            Text(
+              "Re-enable the Folders tab above to configure per-folder scanning.",
+              style: TextStyle(
+                  fontSize: 12,
+                  color: scheme.onSurfaceVariant.withOpacity(0.8)
+              ),
+            ),
+          ],
+
+          ////////////////////////////////////////////////////////////////////
+          // FOLDER SCANNING UI (only if FOLDER TAB is visible)
+          ////////////////////////////////////////////////////////////////////
+          if (showFoldersUI) ...[
+            const Divider(height: 28),
+            Text("Folder Scanning",
+                style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+            const SizedBox(height: 8),
+
+            if (ctrl.folderMap.isEmpty)
+              Text("No folders detected yet.",
+                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+
+            ...ctrl.folderMap.entries.map((entry) {
+              final path = entry.key;
+              final enabled = entry.value;
+              final pretty = path.split("/").last.trim();
+
+              final count = ctrl.folderSongCount[path] ?? 0;
+
+              return SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  pretty.isNotEmpty ? pretty : path,
+                  style: TextStyle(color: scheme.onSurface),
+                ),
+                subtitle: Text(
+                  "$count song${count == 1 ? '' : 's'} • $path",
+                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
+                ),
+                value: enabled,
+                onChanged: (_) => ctrl.toggleFolder(path),
+              );
+            }),
+          ]
         ],
       ),
     );
   }
-
-  void _showNotImplemented(BuildContext c) {
-    ScaffoldMessenger.of(c).showSnackBar(const SnackBar(content: Text('Not implemented yet')));
-  }
 }
 
-/// Library Card: local preference for default list/grid view (persisted)
+////////////////////////////////////////////////////////////////////////////
+/// LIBRARY CARD
+////////////////////////////////////////////////////////////////////////////
+
 class _LibraryCard extends StatefulWidget {
   const _LibraryCard();
 
@@ -246,8 +269,8 @@ class _LibraryCardState extends State<_LibraryCard> {
   void initState() {
     super.initState();
     SharedPreferences.getInstance().then((p) {
-      final v = p.getString(_kKeyDefaultView) ?? 'list';
-      setState(() => _defaultView = v);
+      _defaultView = p.getString(_kKeyDefaultView) ?? 'list';
+      setState(() {});
     });
   }
 
@@ -259,13 +282,14 @@ class _LibraryCardState extends State<_LibraryCard> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return _CardContainer(
       title: 'Library',
       subtitle: 'Default view & sorting',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Default view', style: TextStyle(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurface)),
+          Text('Default view', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -274,45 +298,40 @@ class _LibraryCardState extends State<_LibraryCard> {
               _RadioButton(label: 'Grid', selected: _defaultView == 'grid', onTap: () => _setDefault('grid')),
             ],
           ),
-          const SizedBox(height: 12),
-          _ListRow(
-            icon: Icons.sort_rounded,
-            title: 'Sort order',
-            subtitle: 'Tap to choose... (coming soon)',
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Not implemented'))),
-          ),
         ],
       ),
     );
   }
 }
 
-/// Small About / version card
+////////////////////////////////////////////////////////////////////////////
+/// ABOUT CARD
+////////////////////////////////////////////////////////////////////////////
+
 class _AboutCard extends StatelessWidget {
   const _AboutCard();
 
   @override
   Widget build(BuildContext context) {
-    // final scheme = Theme.of(context).colorScheme;
     return _CardContainer(
       title: 'About',
       subtitle: 'App information & policies',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+        children: const [
           _ListRow(
             icon: Icons.info_rounded,
             title: 'App version',
             subtitle: '1.0.0',
-            onTap: () {},
+            onTap: null,
             dense: true,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           _ListRow(
             icon: Icons.shield_outlined,
             title: 'Privacy & permissions',
             subtitle: 'Review permissions and privacy',
-            onTap: () {},
+            onTap: null,
           ),
         ],
       ),
@@ -320,21 +339,21 @@ class _AboutCard extends StatelessWidget {
   }
 }
 
-/// Generic card container to match your app's visual style
+////////////////////////////////////////////////////////////////////////////
+/// INTERNAL SHARED WIDGETS
+////////////////////////////////////////////////////////////////////////////
+
 class _CardContainer extends StatelessWidget {
   final String title;
   final String subtitle;
   final Widget child;
 
-  const _CardContainer({
-    required this.title,
-    required this.subtitle,
-    required this.child,
-  });
+  const _CardContainer({required this.title, required this.subtitle, required this.child});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -342,25 +361,15 @@ class _CardContainer extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.04)),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
-          )
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 6)),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-                const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
-              ]),
-            ),
-          ]),
+          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+          const SizedBox(height: 4),
+          Text(subtitle, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 12),
           child,
         ],
@@ -369,25 +378,25 @@ class _CardContainer extends StatelessWidget {
   }
 }
 
-/// Small tappable row used inside cards
 class _ListRow extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool dense;
 
   const _ListRow({
     required this.icon,
     required this.title,
-    required this.onTap,
     this.subtitle,
+    this.onTap,
     this.dense = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -406,16 +415,19 @@ class _ListRow extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 4),
-                  Text(subtitle!, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(subtitle!, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+                  ],
                 ],
-              ]),
+              ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded, color: scheme.onSurfaceVariant),
+            if (onTap != null)
+              const Icon(Icons.chevron_right_rounded),
           ],
         ),
       ),
@@ -423,7 +435,6 @@ class _ListRow extends StatelessWidget {
   }
 }
 
-/// Custom radio-like button
 class _RadioButton extends StatelessWidget {
   final String label;
   final bool selected;
@@ -434,6 +445,7 @@ class _RadioButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -451,99 +463,6 @@ class _RadioButton extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Player settings page (persisted with SharedPreferences)
-class _PlayerSettingsScreen extends StatefulWidget {
-  const _PlayerSettingsScreen();
-
-  @override
-  State<_PlayerSettingsScreen> createState() => _PlayerSettingsScreenState();
-}
-
-class _PlayerSettingsScreenState extends State<_PlayerSettingsScreen> {
-  static const _kVinyl = 'player.vinyl.enabled';
-  static const _kTonearm = 'player.tonearm.enabled';
-  static const _kMiniExpand = 'player.mini.expandOnTap';
-
-  bool _vinyl = true;
-  bool _tonearm = true;
-  bool _miniExpandOnTap = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final p = await SharedPreferences.getInstance();
-    setState(() {
-      _vinyl = p.getBool(_kVinyl) ?? true;
-      _tonearm = p.getBool(_kTonearm) ?? true;
-      _miniExpandOnTap = p.getBool(_kMiniExpand) ?? true;
-    });
-  }
-
-  Future<void> _setBool(String key, bool value) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setBool(key, value);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(title: Text('Player Settings', style: TextStyle(color: scheme.onSurface, fontWeight: FontWeight.w700)), backgroundColor: scheme.surface),
-      backgroundColor: scheme.surface,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _CardContainer(
-            title: 'Playback visuals',
-            subtitle: 'Vinyl, tonearm and mini-player behavior',
-            child: Column(
-              children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Vinyl animation'),
-                  subtitle: const Text('Show rotating vinyl in the full player'),
-                  value: _vinyl,
-                  onChanged: (v) {
-                    _setBool(_kVinyl, v);
-                    setState(() => _vinyl = v);
-                    // Optionally: notify AudioPlayerController if you add support
-                  },
-                ),
-                const SizedBox(height: 6),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Tonearm animation'),
-                  subtitle: const Text('Animate tonearm when playing/paused'),
-                  value: _tonearm,
-                  onChanged: (v) {
-                    _setBool(_kTonearm, v);
-                    setState(() => _tonearm = v);
-                  },
-                ),
-                const SizedBox(height: 6),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Expand mini-player on tap'),
-                  subtitle: const Text('Tap the mini player to open full view'),
-                  value: _miniExpandOnTap,
-                  onChanged: (v) {
-                    _setBool(_kMiniExpand, v);
-                    setState(() => _miniExpandOnTap = v);
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -2,9 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
+import 'package:vinu/player/library_visibility_controller.dart';
 
 import 'player/audio_player_controller.dart';
 import 'player/favorites_controller.dart';
+import 'player/playlist_controller.dart';
 import 'theme/theme_controller.dart';
 
 import 'ui/screens/home_screen.dart';
@@ -26,6 +28,8 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AudioPlayerController()),
         ChangeNotifierProvider(create: (_) => ThemeController()),
         ChangeNotifierProvider(create: (_) => FavoritesController()),
+        ChangeNotifierProvider(create: (_) => PlaylistController()),
+        ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
       ],
       child: const VinuMusicApp(),
     ),
