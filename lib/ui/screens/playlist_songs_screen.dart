@@ -64,7 +64,7 @@ class _PlaylistSongsScreenState extends State<PlaylistSongsScreen> {
       body: _loading
           ? Center(child: CircularProgressIndicator(color: scheme.primary))
           : playlistSongs.isEmpty
-              ? Center(child: Text("No songs in this playlist", style: TextStyle(color: scheme.onSurface.withOpacity(0.6))))
+              ? Center(child: Text("No songs in this playlist", style: TextStyle(color: scheme.onSurface.withValues( alpha:0.6))))
               : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   itemCount: playlistSongs.length,

@@ -1,4 +1,4 @@
-//lib/ui/screens/home_screen.dart
+// lib/ui/screens/home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
@@ -35,14 +35,40 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
+
+    // Live refresh when folder toggles or tab visibility changes
+    final visibility = context.read<LibraryVisibilityController>();
+    visibility.onFolderSettingsChanged = () {
+      if (mounted) loadData();
+    };
+
     loadData();
   }
 
-  // Create new TAB CONTROLLER anytime visibility changes
+  @override
+  void dispose() {
+    try {
+      final visibility = context.read<LibraryVisibilityController>();
+      visibility.onFolderSettingsChanged = null;
+    } catch (_) {}
+
+    _tabController?.dispose();
+    super.dispose();
+  }
+
+  // Build a new TabController when tabs change
   void _rebuildTabs(List<String> tabs) {
     _tabController?.dispose();
     _tabController = TabController(length: tabs.length, vsync: this);
     setState(() {});
+  }
+
+  // Safe, cross-platform folder extractor
+  String _folderFromPath(String path) {
+    final normalized = path.replaceAll("\\", "/");
+    final idx = normalized.lastIndexOf("/");
+    if (idx <= 0) return "";
+    return normalized.substring(0, idx);
   }
 
   Future<void> loadData() async {
@@ -50,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen>
       bool permission = await _audioQuery.permissionsStatus();
       if (!permission) permission = await _audioQuery.permissionsRequest();
       if (!permission) {
-        setState(() => _loading = false);
+        if (mounted) setState(() => _loading = false);
         return;
       }
 
@@ -60,36 +86,48 @@ class _HomeScreenState extends State<HomeScreen>
       final qArtists = await _audioQuery.queryArtists();
       final qAlbums = await _audioQuery.queryAlbums();
 
-      // --------------------------
-      // BUILD FOLDER -> SONG COUNT
-      // --------------------------
+      // --------------------------------------------------------------
+      // CLEANED: Build folder → song count with safe path extraction
+      // --------------------------------------------------------------
       final Map<String, int> folderCounts = {};
-
       for (var s in qSongs) {
-        final folder = s.data.substring(0, s.data.lastIndexOf("/"));
+        final folder = _folderFromPath(s.data);
+        if (folder.isEmpty) continue;
+
         folderCounts[folder] = (folderCounts[folder] ?? 0) + 1;
       }
 
-      // Register counts + initialize folder toggles
-      visibility.registerFolders(folderCounts);
+      // Controller stores toggles & persists new folders
+      await visibility.registerFolders(folderCounts);
 
-      // Filter only enabled folders
-      List<String> enabled = visibility.enabledFolders;
+      // --------------------------------------------------------------
+      // CLEANED: Filter songs by enabled folders
+      // --------------------------------------------------------------
+      List<SongModel> filteredSongs = qSongs;
+
+      if (visibility.folderScanEnabled && visibility.enabledFolders.isNotEmpty) {
+        final enabled = Set<String>.from(visibility.enabledFolders);
+
+        filteredSongs = qSongs.where((s) {
+          final folder = _folderFromPath(s.data);
+          return enabled.contains(folder);
+        }).toList();
+      }
+
+      final enabledFolders = visibility.enabledFolders;
 
       if (!mounted) return;
 
       setState(() {
-        songs = qSongs;
+        songs = filteredSongs;
         artists = qArtists;
         albums = qAlbums;
-        folders = enabled; // apply filtering
+        folders = enabledFolders;
         _loading = false;
       });
-
-    } catch (e) {
-      debugPrint("Error loading media: $e");
-      if (!mounted) return;
-      setState(() => _loading = false);
+    } catch (e, st) {
+      debugPrint("Error loading media: $e\n$st");
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -98,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen>
     final visibility = context.watch<LibraryVisibilityController>();
     final activeTabs = visibility.activeTabs;
 
-    // Ensure TabController stays in sync
+    // Sync TabController
     if (_tabController == null || _tabController!.length != activeTabs.length) {
       _rebuildTabs(activeTabs);
     }
@@ -130,7 +168,7 @@ class _HomeScreenState extends State<HomeScreen>
               isScrollable: true,
               labelColor: text,
               unselectedLabelColor: muted,
-              labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               indicator: UnderlineTabIndicator(
                 borderSide: BorderSide(width: 3, color: scheme.primary),
                 insets: const EdgeInsets.symmetric(horizontal: 12),

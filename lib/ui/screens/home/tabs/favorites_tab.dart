@@ -31,7 +31,9 @@ class FavoritesTab extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final s = favSongs[i];
+
         return TrackTile(
+          key: ValueKey(s.id),  // FIX: ensures artwork refresh
           title: s.title,
           artist: s.artist ?? "Unknown",
           songId: s.id,

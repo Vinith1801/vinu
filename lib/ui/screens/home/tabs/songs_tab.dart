@@ -15,10 +15,16 @@ class SongsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.read<AudioPlayerController>();
     final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurface.withValues(alpha: 0.5);
 
     if (songs.isEmpty) {
-      return Center(child: Text("No songs found", style: TextStyle(color: muted)));
+      return Center(
+        child: Text(
+          "No songs found",
+          style: TextStyle(
+            color: scheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      );
     }
 
     return ListView.separated(
@@ -27,7 +33,9 @@ class SongsTab extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final s = songs[i];
+
         return TrackTile(
+          key: ValueKey(s.id),
           title: s.title,
           artist: s.artist ?? "Unknown",
           songId: s.id,

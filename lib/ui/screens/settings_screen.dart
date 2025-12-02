@@ -1,4 +1,3 @@
-// lib/ui/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -152,11 +151,15 @@ class _AppearanceCardState extends State<_AppearanceCard> {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-/// TAB VISIBILITY CARD + FOLDER SCAN TOGGLE
+/// VISIBILITY CARD (tabs + per-folder scanning toggles)
 ////////////////////////////////////////////////////////////////////////////
-
 class _VisibilityCard extends StatelessWidget {
   const _VisibilityCard();
+
+  String _basename(String path) {
+    // cross-platform path basename
+    return path.split(RegExp(r'[\\/]+')).last;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -165,17 +168,22 @@ class _VisibilityCard extends StatelessWidget {
 
     final showFoldersUI = ctrl.visibleTabs["Folders"] == true;
 
+    // Prepare a sorted list of folders for stable UI order
+    final folderEntries = ctrl.folderMap.entries.toList()
+      ..sort((a, b) {
+        final aName = _basename(a.key).toLowerCase();
+        final bName = _basename(b.key).toLowerCase();
+        return aName.compareTo(bName);
+      });
+
     return _CardContainer(
       title: "Library Visibility",
-      subtitle: "Home tabs and folder scanning",
+      subtitle: "Home tabs and per-folder scanning",
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ////////////////////////////////////////////////////////////////////
-          // TAB VISIBILITY
-          ////////////////////////////////////////////////////////////////////
-          Text("Home Tabs",
-              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          // Tabs section
+          Text("Home Tabs", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 8),
 
           ...ctrl.visibleTabs.entries.map((entry) {
@@ -185,65 +193,47 @@ class _VisibilityCard extends StatelessWidget {
               value: entry.value,
               onChanged: (_) => ctrl.toggleTab(entry.key),
             );
-          }),
+          }).toList(),
 
-          ////////////////////////////////////////////////////////////////////
-          // FOLDER UI DISABLED WHEN TAB HIDDEN
-          ////////////////////////////////////////////////////////////////////
+          // If Folders tab hidden, show helpful note and skip folder UI
           if (!showFoldersUI) ...[
             const SizedBox(height: 16),
             Text(
               "Folder scanning is hidden because the Folders tab is disabled.",
-              style: TextStyle(
-                  fontSize: 13,
-                  color: scheme.onSurfaceVariant
-              ),
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
             Text(
               "Re-enable the Folders tab above to configure per-folder scanning.",
-              style: TextStyle(
-                  fontSize: 12,
-                  color: scheme.onSurfaceVariant.withOpacity(0.8)
-              ),
+              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant.withValues(alpha: 0.9)),
             ),
           ],
 
-          ////////////////////////////////////////////////////////////////////
-          // FOLDER SCANNING UI (only if FOLDER TAB is visible)
-          ////////////////////////////////////////////////////////////////////
+          // Folder scanning UI (only when Folders tab visible)
           if (showFoldersUI) ...[
             const Divider(height: 28),
-            Text("Folder Scanning",
-                style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+            Text("Folder Scanning", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
             const SizedBox(height: 8),
 
-            if (ctrl.folderMap.isEmpty)
-              Text("No folders detected yet.",
-                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
+            if (folderEntries.isEmpty)
+              Text("No folders detected yet.", style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
 
-            ...ctrl.folderMap.entries.map((entry) {
+            ...folderEntries.map((entry) {
               final path = entry.key;
               final enabled = entry.value;
-              final pretty = path.split("/").last.trim();
-
+              final pretty = _basename(path);
               final count = ctrl.folderSongCount[path] ?? 0;
+              final subtitle = "$count song${count == 1 ? '' : 's'} • $path";
 
               return SwitchListTile(
                 contentPadding: EdgeInsets.zero,
-                title: Text(
-                  pretty.isNotEmpty ? pretty : path,
-                  style: TextStyle(color: scheme.onSurface),
-                ),
-                subtitle: Text(
-                  "$count song${count == 1 ? '' : 's'} • $path",
-                  style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12),
-                ),
+                title: Text(pretty.isNotEmpty ? pretty : path, style: TextStyle(color: scheme.onSurface)),
+                subtitle: Text(subtitle, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
                 value: enabled,
                 onChanged: (_) => ctrl.toggleFolder(path),
               );
-            }),
-          ]
+            }).toList(),
+          ],
         ],
       ),
     );
@@ -253,7 +243,6 @@ class _VisibilityCard extends StatelessWidget {
 ////////////////////////////////////////////////////////////////////////////
 /// LIBRARY CARD
 ////////////////////////////////////////////////////////////////////////////
-
 class _LibraryCard extends StatefulWidget {
   const _LibraryCard();
 
@@ -307,7 +296,6 @@ class _LibraryCardState extends State<_LibraryCard> {
 ////////////////////////////////////////////////////////////////////////////
 /// ABOUT CARD
 ////////////////////////////////////////////////////////////////////////////
-
 class _AboutCard extends StatelessWidget {
   const _AboutCard();
 
@@ -319,20 +307,9 @@ class _AboutCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
-          _ListRow(
-            icon: Icons.info_rounded,
-            title: 'App version',
-            subtitle: '1.0.0',
-            onTap: null,
-            dense: true,
-          ),
+          _ListRow(icon: Icons.info_rounded, title: 'App version', subtitle: '1.0.0', onTap: null, dense: true),
           SizedBox(height: 8),
-          _ListRow(
-            icon: Icons.shield_outlined,
-            title: 'Privacy & permissions',
-            subtitle: 'Review permissions and privacy',
-            onTap: null,
-          ),
+          _ListRow(icon: Icons.shield_outlined, title: 'Privacy & permissions', subtitle: 'Review permissions and privacy', onTap: null),
         ],
       ),
     );
@@ -340,9 +317,8 @@ class _AboutCard extends StatelessWidget {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-/// INTERNAL SHARED WIDGETS
+/// SHARED WIDGETS
 ////////////////////////////////////////////////////////////////////////////
-
 class _CardContainer extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -360,20 +336,15 @@ class _CardContainer extends StatelessWidget {
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.04)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 6)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 6))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-          const SizedBox(height: 4),
-          Text(subtitle, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+        const SizedBox(height: 4),
+        Text(subtitle, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+        const SizedBox(height: 12),
+        child,
+      ]),
     );
   }
 }
@@ -385,51 +356,25 @@ class _ListRow extends StatelessWidget {
   final VoidCallback? onTap;
   final bool dense;
 
-  const _ListRow({
-    required this.icon,
-    required this.title,
-    this.subtitle,
-    this.onTap,
-    this.dense = false,
-  });
+  const _ListRow({required this.icon, required this.title, this.subtitle, this.onTap, this.dense = false});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: dense ? 6 : 10, horizontal: 4),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: scheme.onSurfaceVariant),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 4),
-                    Text(subtitle!, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
-                  ],
-                ],
-              ),
-            ),
-            if (onTap != null)
-              const Icon(Icons.chevron_right_rounded),
-          ],
-        ),
+        child: Row(children: [
+          Container(width: 44, height: 44, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: scheme.onSurfaceVariant)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+            if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13))],
+          ])),
+          if (onTap != null) const Icon(Icons.chevron_right_rounded),
+        ]),
       ),
     );
   }
@@ -451,18 +396,8 @@ class _RadioButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? scheme.primary : scheme.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06)),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? scheme.onPrimary : scheme.onSurface,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        decoration: BoxDecoration(color: selected ? scheme.primary : scheme.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06))),
+        child: Text(label, style: TextStyle(color: selected ? scheme.onPrimary : scheme.onSurface, fontWeight: FontWeight.w700)),
       ),
     );
   }

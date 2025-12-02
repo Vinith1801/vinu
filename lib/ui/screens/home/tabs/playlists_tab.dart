@@ -14,7 +14,7 @@ class PlaylistsTab extends StatelessWidget {
     final playlistCtrl = context.watch<PlaylistController>();
     final playlists = playlistCtrl.playlists;
     final scheme = Theme.of(context).colorScheme;
-    final muted = scheme.onSurface.withOpacity(0.6);
+    final muted = scheme.onSurface.withValues( alpha:0.6);
 
     return Column(
       children: [
@@ -59,13 +59,13 @@ class PlaylistsTab extends StatelessWidget {
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: scheme.primary.withOpacity(0.12),
+                          color: scheme.primary.withValues( alpha:0.12),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(Icons.queue_music_rounded, color: scheme.primary),
                       ),
                       title: Text(p.name, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-                      subtitle: Text("${p.songIds.length} songs", style: TextStyle(color: scheme.onSurface.withOpacity(0.6))),
+                      subtitle: Text("${p.songIds.length} songs", style: TextStyle(color: scheme.onSurface.withValues( alpha:0.6))),
                       trailing: PopupMenuButton<String>(
                         onSelected: (v) async {
                           if (v == 'rename') {
