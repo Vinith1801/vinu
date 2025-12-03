@@ -1,7 +1,7 @@
 //lib/ui/widgets/seekbar.dart
 import 'package:flutter/material.dart';
 
-class SeekBar extends StatelessWidget {
+class SeekBar extends StatefulWidget {
   final Duration position;
   final Duration duration;
   final ValueChanged<Duration> onChangeEnd;
@@ -14,53 +14,64 @@ class SeekBar extends StatelessWidget {
   });
 
   @override
+  State<SeekBar> createState() => _SeekBarState();
+}
+
+class _SeekBarState extends State<SeekBar> {
+  double? _dragValue;
+
+  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    final pos = position.inMilliseconds.toDouble();
-    final dur = duration.inMilliseconds.toDouble();
-    final sliderValue = pos.clamp(0, dur > 0 ? dur : 1).toDouble();
+    // Convert to double safely
+    final double posMs = widget.position.inMilliseconds.toDouble();
+    final double durMs = widget.duration.inMilliseconds.toDouble() <= 0
+        ? 1
+        : widget.duration.inMilliseconds.toDouble();
+
+    // When dragging, show drag value; otherwise current song position
+    final double sliderValue = (_dragValue ?? posMs).clamp(0, durMs);
 
     return Column(
       children: [
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 4,
-
-            // THEMED TRACK COLORS
             activeTrackColor: scheme.primary,
-            inactiveTrackColor: scheme.onSurfaceVariant.withValues(alpha: 0.3),
-
-            // THEMED THUMB
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+            inactiveTrackColor:
+                scheme.onSurfaceVariant.withValues(alpha: 0.3),
+            thumbShape:
+                const RoundSliderThumbShape(enabledThumbRadius: 7),
             thumbColor: scheme.primary,
-
-            // THEMED OVERLAY
             overlayColor: scheme.primary.withValues(alpha: 0.2),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-
-            // Remove value indicator for clean music player UI
-            valueIndicatorColor: Colors.transparent,
-            valueIndicatorTextStyle: const TextStyle(fontSize: 0),
+            overlayShape:
+                const RoundSliderOverlayShape(overlayRadius: 16),
           ),
           child: Slider(
-            min: 0,
-            max: dur > 0 ? dur : 1,
+            min: 0.0,
+            max: durMs,
             value: sliderValue,
-            onChanged: (_) {},
-            onChangeEnd: (value) =>
-                onChangeEnd(Duration(milliseconds: value.toInt())),
+            onChanged: (value) {
+              setState(() => _dragValue = value);
+            },
+            onChangeEnd: (value) {
+              setState(() => _dragValue = null); // release drag
+              widget.onChangeEnd(
+                Duration(milliseconds: value.toInt()),
+              );
+            },
           ),
         ),
 
-        // TIME LABELS
+        // Time Labels
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _format(position),
+                _format(Duration(milliseconds: sliderValue.toInt())),
                 style: TextStyle(
                   fontSize: 13,
                   color: scheme.onSurfaceVariant,
@@ -68,7 +79,7 @@ class SeekBar extends StatelessWidget {
                 ),
               ),
               Text(
-                _format(duration),
+                _format(widget.duration),
                 style: TextStyle(
                   fontSize: 13,
                   color: scheme.onSurfaceVariant,

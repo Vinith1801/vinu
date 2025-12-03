@@ -22,6 +22,7 @@ class SongsTab extends StatelessWidget {
           "No songs found",
           style: TextStyle(
             color: scheme.onSurface.withValues(alpha: 0.5),
+            fontSize: 15,
           ),
         ),
       );

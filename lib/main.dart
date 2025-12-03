@@ -7,6 +7,7 @@ import 'package:vinu/player/library_visibility_controller.dart';
 import 'player/audio_player_controller.dart';
 import 'player/favorites_controller.dart';
 import 'player/playlist_controller.dart';
+import 'player/library_controller.dart';
 import 'theme/theme_controller.dart';
 
 import 'ui/screens/home_screen.dart';
@@ -30,6 +31,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => FavoritesController()),
         ChangeNotifierProvider(create: (_) => PlaylistController()),
         ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
+        ChangeNotifierProvider(create: (_) => LibraryController()..init()),
       ],
       child: const VinuMusicApp(),
     ),

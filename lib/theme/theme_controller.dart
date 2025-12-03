@@ -140,35 +140,6 @@ class ThemeController extends ChangeNotifier {
         end: Alignment.bottomRight,
       ),
     ),
-
-    // -------------------------
-    // 8. OLED Pure Black Theme
-    // -------------------------
-    AppColorSet(
-      primary: Color(0xFF00E5FF),      // electric cyan pop
-      secondary: Color(0xFF0091A7),    // deep cyan anchor
-      background: Color(0xFF000000),   // true OLED black
-
-      // Light gradient (used in light mode – still dark but not pure black)
-      gradientLight: LinearGradient(
-        colors: [
-          Color(0xFF001316),
-          Color(0xFF00363D),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-
-      // OLED-dark gradient (pure black + cyan glow)
-      gradientDark: LinearGradient(
-        colors: [
-          Color(0xFF000000),           // absolute black
-          Color(0xFF001A1C),           // minimal glow tint
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-    ),
   ];
 
   AppColorSet get current => colorSets[selectedIndex];

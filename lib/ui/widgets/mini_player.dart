@@ -1,8 +1,11 @@
-//lib/ui/widgets/mini_player.dart
+// lib/ui/widgets/mini_player.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
+import 'package:vinu/player/favorites_controller.dart';
+
 import '../../player/audio_player_controller.dart';
 import 'seekbar.dart';
 
@@ -28,7 +31,7 @@ class _MiniPlayerState extends State<MiniPlayer>
   late final AnimationController tonearmCtrl;
 
   SongModel? _cachedSong;
-  Widget? _vinylArtwork;
+  Widget? _vinylCached; // cached + repaint-isolated vinyl artwork
 
   @override
   void initState() {
@@ -129,21 +132,31 @@ class _MiniPlayerState extends State<MiniPlayer>
                       tileColor: isCurrent
                           ? scheme.primary.withValues(alpha: 0.1)
                           : null,
-                      leading: QueryArtworkWidget(
-                        id: song.id,
-                        type: ArtworkType.AUDIO,
-                        artworkHeight: 48,
-                        artworkWidth: 48,
-                        nullArtworkWidget: Icon(Icons.music_note,
-                            size: 36, color: scheme.onSurface),
+                      leading: SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: RepaintBoundary(
+                          child: _MiniArtwork(
+                            songId: song.id,
+                            placeholder: Container(
+                              color: scheme.surfaceContainerHighest,
+                              child: Icon(
+                                Icons.music_note,
+                                size: 32,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                       title: Text(
                         song.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: scheme.onSurface,
-                            fontWeight: FontWeight.w600),
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       subtitle: Text(
                         song.artist ?? "Unknown",
@@ -152,8 +165,7 @@ class _MiniPlayerState extends State<MiniPlayer>
                         ),
                       ),
                       trailing: isCurrent
-                          ? Icon(Icons.play_arrow,
-                              color: scheme.primary)
+                          ? Icon(Icons.play_arrow, color: scheme.primary)
                           : null,
                       onTap: () {
                         Navigator.of(context).pop();
@@ -172,6 +184,7 @@ class _MiniPlayerState extends State<MiniPlayer>
 
   @override
   Widget build(BuildContext context) {
+    // Rebuild only when currentSongId changes
     final currentSongId =
         context.select<AudioPlayerController, int?>(
       (c) => c.currentSongId,
@@ -183,74 +196,85 @@ class _MiniPlayerState extends State<MiniPlayer>
     final song = controller.currentSong!;
     final scheme = Theme.of(context).colorScheme;
 
+    // cache vinyl disc per song, with repaint boundary
     if (_cachedSong == null || _cachedSong!.id != song.id) {
       _cachedSong = song;
-      _vinylArtwork = _buildVinylDisc(song.id, scheme);
+      _vinylCached = RepaintBoundary(
+        child: _buildVinylDisc(song.id, scheme),
+      );
     }
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        if (heightNotifier.value == collapsedHeight) {
-          _snapTo(expandedHeight);
-          heightNotifier.value = expandedHeight;
-        }
-      },
-      onVerticalDragUpdate: (d) {
-        final newH = (heightNotifier.value - d.delta.dy)
-            .clamp(collapsedHeight, expandedHeight);
-        heightNotifier.value = newH;
-      },
-      onVerticalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-
-        if (v < -600) {
-          _snapTo(expandedHeight);
-          heightNotifier.value = expandedHeight;
-        } else if (v > 600) {
-          _snapTo(collapsedHeight);
-          heightNotifier.value = collapsedHeight;
-        } else {
-          final mid = collapsedHeight +
-              (expandedHeight - collapsedHeight) * 0.85;
-          if (heightNotifier.value > mid) {
+    return RepaintBoundary(
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          if (heightNotifier.value == collapsedHeight) {
             _snapTo(expandedHeight);
             heightNotifier.value = expandedHeight;
-          } else {
+          }
+        },
+        onVerticalDragUpdate: (d) {
+          final newH = (heightNotifier.value - d.delta.dy)
+              .clamp(collapsedHeight, expandedHeight);
+          heightNotifier.value = newH;
+        },
+        onVerticalDragEnd: (details) {
+          final v = details.primaryVelocity ?? 0;
+
+          if (v < -600) {
+            _snapTo(expandedHeight);
+            heightNotifier.value = expandedHeight;
+          } else if (v > 600) {
             _snapTo(collapsedHeight);
             heightNotifier.value = collapsedHeight;
+          } else {
+            final mid = collapsedHeight +
+                (expandedHeight - collapsedHeight) * 0.85;
+            if (heightNotifier.value > mid) {
+              _snapTo(expandedHeight);
+              heightNotifier.value = expandedHeight;
+            } else {
+              _snapTo(collapsedHeight);
+              heightNotifier.value = collapsedHeight;
+            }
           }
-        }
-      },
-      onHorizontalDragEnd: (details) {
-        if (heightNotifier.value <= collapsedHeight + 60) return;
-        final v = details.primaryVelocity ?? 0;
-        if (v < -600) {
-          controller.next();
-        } else if (v > 600) {controller.previous();}
-      },
-      child: ValueListenableBuilder<double>(
-        valueListenable: heightNotifier,
-        builder: (_, height, _) {
-          return Container(
-            height: height,
-            decoration: BoxDecoration(
-              color: scheme.surface,
-              borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(26)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, -3),
-                ),
-              ],
-            ),
-            child: height < collapsedHeight + 60
-                ? _mini(controller, scheme)
-                : _full(controller, scheme),
-          );
         },
+        onHorizontalDragEnd: (details) {
+          if (heightNotifier.value <= collapsedHeight + 60) return;
+          final v = details.primaryVelocity ?? 0;
+          if (v < -600) {
+            controller.next();
+          } else if (v > 600) {
+            controller.previous();
+          }
+        },
+        child: AnimatedBuilder(
+          animation: heightNotifier,
+          builder: (_, __) {
+            // no context.select here; we just read the notifier value
+            final height = heightNotifier.value;
+
+            return Container(
+              height: height,
+              decoration: BoxDecoration(
+                color: scheme.surface,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(26),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, -3),
+                  ),
+                ],
+              ),
+              child: height < collapsedHeight + 60
+                  ? _mini(controller, scheme)
+                  : _full(controller, scheme),
+            );
+          },
+        ),
       ),
     );
   }
@@ -267,17 +291,21 @@ class _MiniPlayerState extends State<MiniPlayer>
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: QueryArtworkWidget(
-              id: song.id,
-              type: ArtworkType.AUDIO,
-              artworkHeight: 58,
-              artworkWidth: 58,
-              nullArtworkWidget: Container(
-                width: 58,
-                height: 58,
-                color: scheme.surfaceContainerHighest,
-                child:
-                    Icon(Icons.music_note, size: 26, color: scheme.onSurface),
+            child: SizedBox(
+              width: 58,
+              height: 58,
+              child: RepaintBoundary(
+                child: _MiniArtwork(
+                  songId: song.id,
+                  placeholder: Container(
+                    color: scheme.surfaceContainerHighest,
+                    child: Icon(
+                      Icons.music_note,
+                      size: 26,
+                      color: scheme.onSurface,
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
@@ -287,27 +315,32 @@ class _MiniPlayerState extends State<MiniPlayer>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(song.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 15,
-                        color: scheme.onSurface)),
+                Text(
+                  song.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: scheme.onSurface,
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(song.artist ?? "Unknown Artist",
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: scheme.onSurfaceVariant,
-                    )),
+                Text(
+                  song.artist ?? "Unknown Artist",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
           Selector<AudioPlayerController, bool>(
             selector: (_, c) => c.isPlaying,
-            builder: (_, isPlaying, _) {
+            builder: (_, isPlaying, __) {
               return IconButton(
                 iconSize: 30,
                 icon: Icon(
@@ -329,262 +362,272 @@ class _MiniPlayerState extends State<MiniPlayer>
   //                      FULL UI
   // ----------------------------------------------------------
   Widget _full(AudioPlayerController c, ColorScheme scheme) {
-    return StreamBuilder<PositionData>(
-      stream: c.positionDataStream,
-      builder: (_, snap) {
-        final position = snap.data?.position ?? Duration.zero;
-        final duration = snap.data?.duration ?? Duration.zero;
-        final song = c.currentSong!;
+    final song = c.currentSong!;
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 22),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                scheme.surface,
-                scheme.surfaceContainerHighest.withValues(alpha: 0.4),
-              ],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 6),
+    return Column(
+      children: [
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
 
-              // Collapse arrow
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  icon: Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 30, color: scheme.onSurface),
-                  onPressed: () {
-                    _snapTo(collapsedHeight);
-                    heightNotifier.value = collapsedHeight;
-                  },
+                // TOP ROW: COLLAPSE ARROW
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 32,
+                      color: scheme.onSurface,
+                    ),
+                    onPressed: () {
+                      _snapTo(collapsedHeight);
+                      heightNotifier.value = collapsedHeight;
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 4),
+                const SizedBox(height: 12),
 
-              // Title + Artist
-              Text(song.title,
+                // VINYL DISC CENTERED
+                SizedBox(
+                  width: 320,
+                  height: 320,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Center(
+                        child: Selector<AudioPlayerController, bool>(
+                          selector: (_, c) => c.isPlaying,
+                          builder: (_, isPlaying, __) {
+                            if (isPlaying) {
+                              if (!rotateCtrl.isAnimating) {
+                                rotateCtrl.repeat();
+                              }
+                              tonearmCtrl.forward();
+                            } else {
+                              rotateCtrl.stop();
+                              tonearmCtrl.reverse();
+                            }
+
+                            return RotationTransition(
+                              turns: rotateCtrl,
+                              child: _vinylCached ?? const SizedBox.shrink(),
+                            );
+                          },
+                        ),
+                      ),
+
+                      Positioned(
+                        right: -18,
+                        top: -18,
+                        child: AnimatedBuilder(
+                          animation: tonearmCtrl,
+                          builder: (_, child) {
+                            return Transform.rotate(
+                              angle: -0.6 + tonearmCtrl.value * 0.55,
+                              alignment: Alignment.topLeft,
+                              child: child,
+                            );
+                          },
+                          child: _buildTonearm(scheme),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 26),
+
+                // TITLE + ARTIST
+                Text(
+                  song.title,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22,
-                      color: scheme.onSurface)
-                      ),
+                    color: scheme.onSurface,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  song.artist ?? "Unknown Artist",
+                  style: TextStyle(
+                    color: scheme.onSurfaceVariant,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
 
-              const SizedBox(height: 4),
+                const SizedBox(height: 26),
 
-              Text(song.artist ?? "Unknown Artist",
-                  style: TextStyle(fontSize: 15, color: scheme.onSurfaceVariant)),
-              const SizedBox(height: 14),
-              const SizedBox(height: 26),
-
-              // Vinyl + tonearm
-              SizedBox(
-                width: 320,
-                height: 320,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Center(
-                      child: Selector<AudioPlayerController, bool>(
-                        selector: (_, c) => c.isPlaying,
-                        builder: (_, isPlaying, _) {
-                          if (isPlaying) {
-                            if (!rotateCtrl.isAnimating) rotateCtrl.repeat();
-                            tonearmCtrl.forward();
-                          } else {
-                            rotateCtrl.stop();
-                            tonearmCtrl.reverse();
-                          }
-
-                          return RotationTransition(
-                            turns: rotateCtrl,
-                            child: _vinylArtwork!,
-                          );
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Selector<FavoritesController, bool>(
+                    selector: (_, fav) => fav.isFavorite(c.currentSong!.id),
+                    builder: (_, isFav, __) {
+                      return GestureDetector(
+                        onTap: () {
+                          context.read<FavoritesController>()
+                              .toggleFavorite(c.currentSong!.id);
                         },
-                      ),
-                    ),
-
-                    // Tonearm on right side like screenshot
-                    Positioned(
-                      right: -18,
-                      top: -18,
-                      child: AnimatedBuilder(
-                        animation: tonearmCtrl,
-                        builder: (_, child) {
-                          return Transform.rotate(
-                            angle: -0.6 + tonearmCtrl.value * 0.55,
-                            alignment: Alignment.topLeft,
-                            child: child,
-                          );
-                        },
-                        child: _buildTonearm(scheme),
-                      ),
-                    ),
-                  ],
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          transitionBuilder: (child, anim) =>
+                              ScaleTransition(scale: anim, child: child),
+                          child: Icon(
+                            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                            key: ValueKey(isFav),
+                            size: 32,
+                            color: isFav ? scheme.primary : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 ),
-              ),
+                // SEEK 
+                RepaintBoundary(
+                  child: StreamBuilder<PositionData>(
+                    stream: c.smoothPositionStream,
+                    builder: (_, snap) {
+                      final position = snap.data?.position ?? Duration.zero;
+                      final duration = snap.data?.duration ?? Duration.zero;
 
-              const SizedBox(height: 28),
-
-              // Seekbar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: SeekBar(
-                  position: position,
-                  duration: duration,
-                  onChangeEnd: c.seek,
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: SeekBar(
+                              position: position,
+                              duration: duration,
+                              onChangeEnd: c.seek,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                        ],
+                      );
+                    },
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-              // Player controls row (simple)
-              _controls(c, scheme),
+                // PLAYBACK CONTROLS
+                _controls(c, scheme),
 
-              const SizedBox(height: 20),
-
-              // Bottom row: favorite, delete, share, more
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.favorite_border_rounded,
-                      size: 26, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 32),
-                  Icon(Icons.delete_outline_rounded,
-                      size: 26, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 32),
-                  Icon(Icons.share_rounded,
-                      size: 26, color: scheme.onSurfaceVariant),
-                  const SizedBox(width: 32),
-                  Icon(Icons.more_vert_rounded,
-                      size: 26, color: scheme.onSurfaceVariant),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // ------------------ Vinyl Disc ------------------
-Widget _buildVinylDisc(int id, ColorScheme scheme) {
-  const double size = 300;
-  const double artSize = 220;
-
-  return SizedBox(
-    width: size,
-    height: size,
-    child: Stack(
-      alignment: Alignment.center,
-      children: [
-        // ---------------------------
-        // BLACK BASE
-        // ---------------------------
-        Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.black,
-          ),
-        ),
-
-        // ---------------------------
-        // 4 CIRCULAR GROOVES
-        // ---------------------------
-        ...List.generate(
-          4,
-          (i) {
-            final radius = size - (i * 32);
-            return Container(
-              width: radius,
-              height: radius,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha:0.08),
-                  width: 1,
-                ),
-              ),
-            );
-          },
-        ),
-
-        // ---------------------------
-        // GLOSSY REFLECTION SWEEP ARC
-        // ---------------------------
-        Transform.rotate(
-          angle: -0.4, // small tilt makes it look real
-          child: Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: SweepGradient(
-                startAngle: 0,
-                endAngle: 6.28,
-                colors: [
-                  Colors.white.withValues(alpha:0.23), // bright shine
-                  Colors.transparent,
-                  Colors.transparent,
-                  Colors.white.withValues(alpha:0.23),
-                ],
-                stops: const [0.0, 0.18, 0.82, 1.0],
-              ),
-            ),
-          ),
-        ),
-
-        // ---------------------------
-        // CENTER ARTWORK
-        // ---------------------------
-        ClipOval(
-          child: QueryArtworkWidget(
-            id: id,
-            type: ArtworkType.AUDIO,
-            artworkHeight: artSize,
-            artworkWidth: artSize,
-            nullArtworkWidget: Container(
-              width: artSize,
-              height: artSize,
-              color: Colors.grey.shade900,
-              child: Icon(
-                Icons.music_note,
-                size: 60,
-                color: Colors.white.withValues(alpha:0.7),
-              ),
-            ),
-          ),
-        ),
-
-        // ---------------------------
-        // VINYL CENTER CAP
-        // ---------------------------
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white,
-            border: Border.all(
-              color: Colors.black,
-              width: 2,
+                const SizedBox(height: 22),
+              ],
             ),
           ),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
+
+  // ------------------ Vinyl Disc ------------------
+  Widget _buildVinylDisc(int id, ColorScheme scheme) {
+    const double size = 300;
+    const double artSize = 220;
+
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // BLACK BASE
+          Container(
+            width: size,
+            height: size,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.black,
+            ),
+          ),
+
+          // Grooves
+          ...List.generate(
+            4,
+            (i) {
+              final radius = size - (i * 32);
+              return Container(
+                width: radius,
+                height: radius,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    width: 1,
+                  ),
+                ),
+              );
+            },
+          ),
+
+          // Glossy sweep
+          Transform.rotate(
+            angle: -0.4,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  startAngle: 0,
+                  endAngle: 6.28,
+                  colors: [
+                    Colors.white.withValues(alpha: 0.23),
+                    Colors.transparent,
+                    Colors.transparent,
+                    Colors.white.withValues(alpha: 0.23),
+                  ],
+                  stops: const [0.0, 0.18, 0.82, 1.0],
+                ),
+              ),
+            ),
+          ),
+
+          // Artwork – using cached MiniArtwork instead of QueryArtworkWidget
+          ClipOval(
+            child: SizedBox(
+              width: artSize,
+              height: artSize,
+              child: _MiniArtwork(
+                songId: id,
+                placeholder: Container(
+                  width: artSize,
+                  height: artSize,
+                  color: Colors.grey.shade900,
+                  child: Icon(
+                    Icons.music_note,
+                    size: 60,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Center cap
+          Container(
+            width: 22,
+            height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(
+                color: Colors.black,
+                width: 2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ------------------ Tonearm ------------------
   Widget _buildTonearm(ColorScheme scheme) {
@@ -603,7 +646,10 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: armColor.withValues(alpha: 0.08),
-                border: Border.all(color: armColor.withValues(alpha: 0.3), width: 2),
+                border: Border.all(
+                  color: armColor.withValues(alpha: 0.3),
+                  width: 2,
+                ),
               ),
             ),
           ),
@@ -649,7 +695,7 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
             "shuffle": p.isShuffling,
             "repeat": p.loopMode,
           },
-          builder: (_, data, _) {
+          builder: (_, data, __) {
             final shuffle = data["shuffle"] as bool;
             final repeat = data["repeat"] as LoopMode;
 
@@ -695,14 +741,16 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
 
         IconButton(
           iconSize: 36,
-          icon: Icon(Icons.skip_previous_rounded,
-              color: scheme.onSurface),
+          icon: Icon(
+            Icons.skip_previous_rounded,
+            color: scheme.onSurface,
+          ),
           onPressed: c.previous,
         ),
 
         Selector<AudioPlayerController, bool>(
           selector: (_, p) => p.isPlaying,
-          builder: (_, isPlaying, _) => IconButton(
+          builder: (_, isPlaying, __) => IconButton(
             iconSize: 80,
             icon: Icon(
               isPlaying
@@ -716,7 +764,10 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
 
         IconButton(
           iconSize: 36,
-          icon: Icon(Icons.skip_next_rounded, color: scheme.onSurface),
+          icon: Icon(
+            Icons.skip_next_rounded,
+            color: scheme.onSurface,
+          ),
           onPressed: c.next,
         ),
 
@@ -724,11 +775,87 @@ Widget _buildVinylDisc(int id, ColorScheme scheme) {
 
         IconButton(
           iconSize: 30,
-          icon: Icon(Icons.queue_music_rounded,
-              color: scheme.onSurfaceVariant),
+          icon: Icon(
+            Icons.queue_music_rounded,
+            color: scheme.onSurfaceVariant,
+          ),
           onPressed: () => _openQueue(context),
         ),
       ],
     );
+  }
+}
+
+// ------------------------------------------------------------
+// SHARED MINI ARTWORK WIDGET – uses AudioPlayerController cache
+// ------------------------------------------------------------
+class _MiniArtwork extends StatefulWidget {
+  final int songId;
+  final Widget placeholder;
+
+  const _MiniArtwork({
+    required this.songId,
+    required this.placeholder,
+  });
+
+  @override
+  State<_MiniArtwork> createState() => _MiniArtworkState();
+}
+
+class _MiniArtworkState extends State<_MiniArtwork> {
+  Uri? _uri;
+  bool _loading = false;
+  bool _fileExists = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadArtwork();
+  }
+
+  @override
+  void didUpdateWidget(covariant _MiniArtwork oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.songId != widget.songId) {
+      _uri = null;
+      _fileExists = false;
+      _loading = false;
+      _loadArtwork();
+    }
+  }
+
+  void _loadArtwork() {
+    final ctrl = context.read<AudioPlayerController>();
+
+    final cached = ctrl.getCachedArtworkUri(widget.songId);
+    if (cached != null) {
+      _uri = cached;
+      _fileExists = File.fromUri(cached).existsSync();
+      if (mounted) setState(() {});
+      return;
+    }
+
+    if (_loading) return;
+    _loading = true;
+
+    ctrl.ensureArtworkForId(widget.songId).then((uri) {
+      if (!mounted) return;
+      _uri = uri;
+      _fileExists = uri != null && File.fromUri(uri).existsSync();
+      _loading = false;
+      setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_uri != null && _fileExists) {
+      return Image.file(
+        File.fromUri(_uri!),
+        fit: BoxFit.cover,
+      );
+    }
+
+    return widget.placeholder;
   }
 }

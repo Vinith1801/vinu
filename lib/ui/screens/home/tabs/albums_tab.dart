@@ -65,11 +65,13 @@ class _ArtworkLoaderState extends State<_ArtworkLoader>
     if (_bytes != null) {
       return ClipRRect(
         borderRadius: widget.borderRadius,
-        child: Image.memory(
-          _bytes!,
-          width: widget.size,
-          height: widget.size,
-          fit: BoxFit.cover,
+        child: RepaintBoundary(
+          child: Image.memory(
+            _bytes!,
+            width: widget.size,
+            height: widget.size,
+            fit: BoxFit.cover,
+          ),
         ),
       );
     }

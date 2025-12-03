@@ -1,44 +1,26 @@
-//lib/ui/screens/album_songs_screen.dart
+// lib/ui/screens/album_songs_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
 
 import '../../player/audio_player_controller.dart';
+import '../../player/library_controller.dart';
 import '../widgets/track_tile.dart';
 
-class AlbumSongsScreen extends StatefulWidget {
+class AlbumSongsScreen extends StatelessWidget {
   final AlbumModel album;
 
   const AlbumSongsScreen({super.key, required this.album});
 
   @override
-  State<AlbumSongsScreen> createState() => _AlbumSongsScreenState();
-}
-
-class _AlbumSongsScreenState extends State<AlbumSongsScreen> {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-  List<SongModel> songs = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    loadAlbumSongs();
-  }
-
-  Future<void> loadAlbumSongs() async {
-    final all = await _audioQuery.querySongs();
-    songs = all
-        .where((s) => s.albumId == widget.album.id)
-        .toList();
-
-    if (mounted) setState(() => _loading = false);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
+    final lib = context.watch<LibraryController>();
     final controller = context.read<AudioPlayerController>();
+
+    // Pull filtered list directly from the centralized library
+    final songs = lib.getSongsByAlbum(album.id);
 
     return Scaffold(
       backgroundColor: scheme.surface,
@@ -47,7 +29,7 @@ class _AlbumSongsScreenState extends State<AlbumSongsScreen> {
         elevation: 0,
         foregroundColor: scheme.onSurface,
         title: Text(
-          widget.album.album,
+          album.album,
           style: TextStyle(
             fontWeight: FontWeight.w700,
             color: scheme.onSurface,
@@ -55,17 +37,22 @@ class _AlbumSongsScreenState extends State<AlbumSongsScreen> {
         ),
       ),
 
-      body: _loading
-          ? Center(child: CircularProgressIndicator(color: scheme.primary))
+      body: songs.isEmpty
+          ? Center(
+              child: Text(
+                "No songs found",
+                style: TextStyle(color: scheme.onSurfaceVariant),
+              ),
+            )
           : Column(
               children: [
                 const SizedBox(height: 14),
 
-                // Album Art
+                // Album artwork
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: QueryArtworkWidget(
-                    id: widget.album.id,
+                    id: album.id,
                     type: ArtworkType.ALBUM,
                     artworkHeight: 160,
                     artworkWidth: 160,
@@ -80,7 +67,7 @@ class _AlbumSongsScreenState extends State<AlbumSongsScreen> {
 
                 const SizedBox(height: 8),
                 Text(
-                  widget.album.album,
+                  album.album,
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,

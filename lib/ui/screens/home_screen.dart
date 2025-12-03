@@ -20,10 +20,16 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreenState extends State<HomeScreen> 
     with TickerProviderStateMixin {
   final OnAudioQuery _audioQuery = OnAudioQuery();
 
+  // MASTER lists – raw, unfiltered
+  List<SongModel> _allSongs = [];
+  List<ArtistModel> _allArtists = [];
+  List<AlbumModel> _allAlbums = [];
+
+  // Filtered / UI lists
   List<SongModel> songs = [];
   List<ArtistModel> artists = [];
   List<AlbumModel> albums = [];
@@ -35,13 +41,11 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-
-    // Live refresh when folder toggles or tab visibility changes
     final visibility = context.read<LibraryVisibilityController>();
     visibility.onFolderSettingsChanged = () {
-      if (mounted) loadData();
+      if (!mounted) return;
+      _applyVisibilityFilters(visibility);
     };
-
     loadData();
   }
 
@@ -82,53 +86,53 @@ class _HomeScreenState extends State<HomeScreen>
 
       final visibility = context.read<LibraryVisibilityController>();
 
-      final qSongs = await _audioQuery.querySongs();
-      final qArtists = await _audioQuery.queryArtists();
-      final qAlbums = await _audioQuery.queryAlbums();
+      // Only query the device ONCE
+      if (_allSongs.isEmpty) {
+        _allSongs = await _audioQuery.querySongs();
+        _allArtists = await _audioQuery.queryArtists();
+        _allAlbums = await _audioQuery.queryAlbums();
 
-      // --------------------------------------------------------------
-      // CLEANED: Build folder → song count with safe path extraction
-      // --------------------------------------------------------------
-      final Map<String, int> folderCounts = {};
-      for (var s in qSongs) {
-        final folder = _folderFromPath(s.data);
-        if (folder.isEmpty) continue;
-
-        folderCounts[folder] = (folderCounts[folder] ?? 0) + 1;
-      }
-
-      // Controller stores toggles & persists new folders
-      await visibility.registerFolders(folderCounts);
-
-      // --------------------------------------------------------------
-      // CLEANED: Filter songs by enabled folders
-      // --------------------------------------------------------------
-      List<SongModel> filteredSongs = qSongs;
-
-      if (visibility.folderScanEnabled && visibility.enabledFolders.isNotEmpty) {
-        final enabled = Set<String>.from(visibility.enabledFolders);
-
-        filteredSongs = qSongs.where((s) {
+        // Build folderCounts from master list
+        final Map<String, int> folderCounts = {};
+        for (var s in _allSongs) {
           final folder = _folderFromPath(s.data);
-          return enabled.contains(folder);
-        }).toList();
+          if (folder.isEmpty) continue;
+          folderCounts[folder] = (folderCounts[folder] ?? 0) + 1;
+        }
+        await visibility.registerFolders(folderCounts);
       }
 
-      final enabledFolders = visibility.enabledFolders;
-
-      if (!mounted) return;
-
-      setState(() {
-        songs = filteredSongs;
-        artists = qArtists;
-        albums = qAlbums;
-        folders = enabledFolders;
-        _loading = false;
-      });
+      // Now only re-filter based on visibility/folder toggles
+      _applyVisibilityFilters(visibility);
     } catch (e, st) {
       debugPrint("Error loading media: $e\n$st");
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _applyVisibilityFilters(LibraryVisibilityController visibility) {
+    List<SongModel> filteredSongs = _allSongs;
+
+    if (visibility.folderScanEnabled && visibility.enabledFolders.isNotEmpty) {
+      final enabled = Set<String>.from(visibility.enabledFolders);
+
+      filteredSongs = _allSongs.where((s) {
+        final folder = _folderFromPath(s.data);
+        return enabled.contains(folder);
+      }).toList();
+    }
+
+    final enabledFolders = visibility.enabledFolders;
+
+    if (!mounted) return;
+
+    setState(() {
+      songs = filteredSongs;
+      artists = _allArtists;
+      albums = _allAlbums;
+      folders = enabledFolders;
+      _loading = false;
+    });
   }
 
   @override
@@ -158,7 +162,9 @@ class _HomeScreenState extends State<HomeScreen>
     return SafeArea(
       child: Column(
         children: [
-          const Header(),
+          const RepaintBoundary(
+          child: Header(),
+        ),
           const SizedBox(height: 6),
 
           Padding(
@@ -182,32 +188,34 @@ class _HomeScreenState extends State<HomeScreen>
           _loading
               ? const Expanded(child: Center(child: CircularProgressIndicator()))
               : Expanded(
-                  child: TabBarView(
-                    controller: _tabController!,
-                    children: activeTabs.map((t) {
-                      switch (t) {
-                        case "Songs":
-                          return SongsTab(songs: songs);
+                  child: RepaintBoundary(
+                    child: TabBarView(
+                      controller: _tabController!,
+                      children: activeTabs.map((t) {
+                        switch (t) {
+                          case "Songs":
+                            return SongsTab(songs: songs);
 
-                        case "Favorites":
-                          return FavoritesTab(songs: songs);
+                          case "Favorites":
+                            return FavoritesTab(songs: songs);
 
-                        case "Playlists":
-                          return const PlaylistsTab();
+                          case "Playlists":
+                            return const PlaylistsTab();
 
-                        case "Artists":
-                          return ArtistsTab(artists: artists);
+                          case "Artists":
+                            return ArtistsTab(artists: artists);
 
-                        case "Albums":
-                          return AlbumsTab(albums: albums);
+                          case "Albums":
+                            return AlbumsTab(albums: albums);
 
-                        case "Folders":
-                          return FoldersTab(folders: folders);
+                          case "Folders":
+                            return FoldersTab(folders: folders);
 
-                        default:
-                          return const SizedBox.shrink();
-                      }
-                    }).toList(),
+                          default:
+                            return const SizedBox.shrink();
+                        }
+                      }).toList(),
+                    ),
                   ),
                 ),
         ],

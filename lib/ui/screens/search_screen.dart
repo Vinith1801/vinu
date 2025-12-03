@@ -1,8 +1,13 @@
-//lib/ui/screens/search_screen.dart
+// lib/ui/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
+import '../../player/library_controller.dart';
 import '../../player/audio_player_controller.dart';
+import '../widgets/track_tile.dart';
+import 'album_songs_screen.dart';
+import 'artist_songs_screen.dart';
+import 'folder_songs_screen.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -12,384 +17,198 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-
-  List<SongModel> allSongs = [];
-  List<AlbumModel> allAlbums = [];
-  List<ArtistModel> allArtists = [];
-
-  List<dynamic> results = [];
-  List<String> recentSearches = [];
-
-  String category = "Songs";
-  String queryText = "";
-
-  @override
-  void initState() {
-    super.initState();
-    loadData();
-  }
-
-  Future<void> loadData() async {
-    allSongs = await _audioQuery.querySongs();
-    allAlbums = await _audioQuery.queryAlbums();
-    allArtists = await _audioQuery.queryArtists();
-
-    setState(() => results = allSongs);
-  }
-
-  void search(String text) {
-    queryText = text;
-
-    if (text.isEmpty) {
-      if (category == "Songs") results = allSongs;
-      if (category == "Artists") results = allArtists;
-      if (category == "Albums") results = allAlbums;
-      setState(() {});
-      return;
-    }
-
-    final q = text.toLowerCase();
-
-    if (category == "Songs") {
-      results = allSongs.where((s) =>
-          s.title.toLowerCase().contains(q) ||
-          (s.artist ?? "").toLowerCase().contains(q)).toList();
-    } else if (category == "Artists") {
-      results = allArtists.where((a) =>
-          a.artist.toLowerCase().contains(q)).toList();
-    } else {
-      results = allAlbums.where((a) =>
-          a.album.toLowerCase().contains(q)).toList();
-    }
-
-    if (!recentSearches.contains(text)) {
-      recentSearches.insert(0, text);
-      if (recentSearches.length > 10) recentSearches.removeLast();
-    }
-
-    setState(() {});
-  }
-
-  TextSpan highlight(String text, Color highlightColor) {
-    if (queryText.isEmpty) return TextSpan(text: text);
-
-    final lower = text.toLowerCase();
-    final q = queryText.toLowerCase();
-
-    final start = lower.indexOf(q);
-    if (start == -1) return TextSpan(text: text);
-
-    return TextSpan(
-      children: [
-        TextSpan(text: text.substring(0, start)),
-        TextSpan(
-          text: text.substring(start, start + q.length),
-          style: TextStyle(
-            color: highlightColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        TextSpan(text: text.substring(start + q.length)),
-      ],
-    );
-  }
+  String query = "";
+  final TextEditingController _controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
-    final controller = context.read<AudioPlayerController>();
+    final lib = context.watch<LibraryController>();
+    final audio = context.read<AudioPlayerController>();
     final scheme = Theme.of(context).colorScheme;
+
+    // Normalize query
+    final q = query.trim().toLowerCase();
+
+    // 1. SONGS
+    final filteredSongs = q.isEmpty
+        ? const <SongModel>[]
+        : lib.songs.where((s) {
+            return s.title.toLowerCase().contains(q) ||
+                (s.artist ?? "").toLowerCase().contains(q);
+          }).toList();
+
+    // 2. ALBUMS
+    final filteredAlbums = q.isEmpty
+        ? const <AlbumModel>[]
+        : lib.albums.where((a) {
+            return a.album.toLowerCase().contains(q);
+          }).toList();
+
+    // 3. ARTISTS
+    final filteredArtists = q.isEmpty
+        ? const <ArtistModel>[]
+        : lib.artists.where((a) {
+            return a.artist.toLowerCase().contains(q);
+          }).toList();
+
+    // 4. FOLDERS
+    final filteredFolders = q.isEmpty
+        ? const <String>[]
+        : lib.folders.where((f) {
+            final name = f.split("/").last.toLowerCase();
+            return name.contains(q);
+          }).toList();
 
     return Scaffold(
       backgroundColor: scheme.surface,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: scheme.surface,
-        foregroundColor: scheme.onSurface,
-        title: Text("Search",
-            style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: scheme.onSurface)),
+        leading: BackButton(color: scheme.onSurface),
+        title: TextField(
+          controller: _controller,
+          autofocus: true,
+          style: TextStyle(color: scheme.onSurface),
+          decoration: InputDecoration(
+            hintText: "Search songs, albums, artists...",
+            hintStyle: TextStyle(color: scheme.onSurfaceVariant),
+            border: InputBorder.none,
+          ),
+          onChanged: (t) {
+            setState(() {
+              query = t;
+            });
+          },
+        ),
       ),
 
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-
-          // -------------------------------------
-          // Premium Search Bar
-          // -------------------------------------
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues(
-                alpha: scheme.brightness == Brightness.dark ? 0.3 : 0.8,
+      body: q.isEmpty
+          ? Center(
+              child: Text(
+                "Type to search",
+                style: TextStyle(color: scheme.onSurfaceVariant),
               ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  if (scheme.brightness == Brightness.light)
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                ],
-              ),
-              child: TextField(
-                onChanged: search,
-                style: TextStyle(fontSize: 16, color: scheme.onSurface),
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search,
-                      size: 22, color: scheme.onSurfaceVariant),
-                  hintText: "Search songs, artists, albums",
-                  hintStyle:
-                      TextStyle(color: scheme.onSurfaceVariant),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
-                ),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 14),
-
-          // -------------------------------------
-          // CATEGORY CHIPS
-          // -------------------------------------
-          SizedBox(
-            height: 42,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(left: 16),
+            )
+          : ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _categoryChip("Songs", scheme),
-                const SizedBox(width: 10),
-                _categoryChip("Artists", scheme),
-                const SizedBox(width: 10),
-                _categoryChip("Albums", scheme),
-              ],
-            ),
-          ),
+                // SONG RESULTS
+                if (filteredSongs.isNotEmpty) ...[
+                  _header("Songs", scheme),
+                  ...filteredSongs.map((s) => TrackTile(
+                        title: s.title,
+                        artist: s.artist ?? "Unknown Artist",
+                        songId: s.id,
+                        onTap: () {
+                          audio.setPlaylist(filteredSongs, initialIndex: filteredSongs.indexOf(s));
+                        },
+                      )),
+                  const SizedBox(height: 22),
+                ],
 
-          const SizedBox(height: 10),
-
-          // -------------------------------------
-          // RESULTS
-          // -------------------------------------
-          Expanded(
-            child: results.isEmpty
-                ? Center(
-                    child: Text(
-                      "No results found",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: scheme.onSurfaceVariant,
+                // ALBUM RESULTS
+                if (filteredAlbums.isNotEmpty) ...[
+                  _header("Albums", scheme),
+                  ...filteredAlbums.map(
+                    (a) => ListTile(
+                      leading: QueryArtworkWidget(
+                        id: a.id,
+                        type: ArtworkType.ALBUM,
+                        artworkHeight: 55,
+                        artworkWidth: 55,
+                        nullArtworkWidget: Container(
+                          width: 55,
+                          height: 55,
+                          color: scheme.surfaceContainerHighest,
+                          child: Icon(Icons.album, color: scheme.onSurfaceVariant),
+                        ),
+                      ),
+                      title: Text(a.album, style: TextStyle(color: scheme.onSurface)),
+                      subtitle: Text("${a.numOfSongs} songs", style: TextStyle(color: scheme.onSurfaceVariant)),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AlbumSongsScreen(album: a)),
                       ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    itemCount: results.length,
-                    itemBuilder: (_, i) {
-                      if (category == "Songs") {
-                        return _songTile(
-                            results[i],
-                            controller,
-                            scheme);
-                      }
+                  ),
+                  const SizedBox(height: 22),
+                ],
 
-                      if (category == "Artists") {
-                        return _artistTile(results[i], scheme);
-                      }
+                // ARTIST RESULTS
+                if (filteredArtists.isNotEmpty) ...[
+                  _header("Artists", scheme),
+                  ...filteredArtists.map(
+                    (a) => ListTile(
+                      leading: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: scheme.surfaceContainerHighest,
+                        child: Icon(Icons.person, color: scheme.onSurfaceVariant),
+                      ),
+                      title: Text(a.artist, style: TextStyle(color: scheme.onSurface)),
+                      subtitle: Text("${a.numberOfTracks} tracks", style: TextStyle(color: scheme.onSurfaceVariant)),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => ArtistSongsScreen(artist: a)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                ],
 
-                      return _albumTile(results[i], scheme);
+                // FOLDER RESULTS
+                if (filteredFolders.isNotEmpty) ...[
+                  _header("Folders", scheme),
+                  ...filteredFolders.map(
+                    (f) {
+                      final name = f.split("/").last;
+                      final count = lib.getSongsByFolder(f).length;
+                      return ListTile(
+                        leading: Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            color: scheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.folder_rounded, color: scheme.primary),
+                        ),
+                        title: Text(name, style: TextStyle(color: scheme.onSurface)),
+                        subtitle: Text("$count songs", style: TextStyle(color: scheme.onSurfaceVariant)),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => FolderSongsScreen(folderPath: f)),
+                        ),
+                      );
                     },
                   ),
-          ),
-        ],
-      ),
-    );
-  }
+                  const SizedBox(height: 22),
+                ],
 
-  // -----------------------------------------------------------
-  // CATEGORY CHIP - PREMIUM PILL
-  // -----------------------------------------------------------
-  Widget _categoryChip(String name, ColorScheme scheme) {
-    final selected = category == name;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() => category = name);
-        search(queryText);
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 220),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? scheme.primary : scheme.surface,
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(
-            color: selected
-                ? scheme.primary
-                : scheme.outline.withValues(alpha: 0.04),
-          ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: scheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  )
-                ]
-              : [],
-        ),
-        child: Text(
-          name,
-          style: TextStyle(
-            color: selected ? scheme.onPrimary : scheme.onSurface,
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // -----------------------------------------------------------
-  // SONG TILE
-  // -----------------------------------------------------------
-  Widget _songTile(
-      SongModel s, AudioPlayerController controller, ColorScheme scheme) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
-        leading: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: QueryArtworkWidget(
-            id: s.id,
-            type: ArtworkType.AUDIO,
-            artworkHeight: 55,
-            artworkWidth: 55,
-            nullArtworkWidget: Container(
-              width: 55,
-              height: 55,
-              color: scheme.surfaceContainerHighest,
-              child: Icon(Icons.music_note,
-                  color: scheme.onSurfaceVariant),
+                if (filteredSongs.isEmpty &&
+                    filteredAlbums.isEmpty &&
+                    filteredArtists.isEmpty &&
+                    filteredFolders.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 40),
+                      child: Text("No results found", style: TextStyle(color: scheme.onSurfaceVariant)),
+                    ),
+                  ),
+              ],
             ),
-          ),
-        ),
-        title: Text(
-          s.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontWeight: FontWeight.w600, color: scheme.onSurface),
-        ),
-        subtitle: Text(
-          s.artist ?? "Unknown Artist",
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: scheme.onSurfaceVariant),
-        ),
-        onTap: () {
-          controller.setPlaylist(results.cast<SongModel>());
-          controller.playSong(s);
-        },
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        tileColor: scheme.surfaceContainerHighest.withValues(alpha: 0.2),
-      ),
     );
   }
 
-  // -----------------------------------------------------------
-  // ARTIST TILE
-  // -----------------------------------------------------------
-  Widget _artistTile(ArtistModel a, ColorScheme scheme) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      height: 70,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(
-          alpha: scheme.brightness == Brightness.dark ? 0.2 : 0.7,
+  Widget _header(String title, ColorScheme scheme) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w800,
+          fontSize: 18,
+          color: scheme.primary,
         ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          if (scheme.brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 4),
-            )
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 10),
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: scheme.surfaceContainerHighest,
-            child: Icon(Icons.person,
-                size: 28, color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              a.artist,
-              style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: scheme.onSurface),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // -----------------------------------------------------------
-  // ALBUM TILE
-  // -----------------------------------------------------------
-  Widget _albumTile(AlbumModel a, ColorScheme scheme) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      height: 70,
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(
-          alpha: scheme.brightness == Brightness.dark ? 0.2 : 0.7,
-        ),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          if (scheme.brightness == Brightness.light)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 4),
-            )
-        ],
-      ),
-      child: Row(
-        children: [
-          const SizedBox(width: 12),
-          Icon(Icons.album_rounded,
-              size: 32, color: scheme.onSurfaceVariant),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              a.album,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: scheme.onSurface,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

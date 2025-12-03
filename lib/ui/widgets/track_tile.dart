@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vinu/player/playlist_controller.dart';
 
 import '../../player/favorites_controller.dart';
 import '../../player/audio_player_controller.dart';
@@ -12,12 +13,18 @@ class TrackTile extends StatelessWidget {
   final int songId;
   final VoidCallback onTap;
 
+  // NEW: tells the tile/menu whether it's inside a playlist screen
+  final bool insidePlaylist;
+  final String? playlistId;
+
   const TrackTile({
     super.key,
     required this.title,
     required this.artist,
     required this.songId,
     required this.onTap,
+    this.insidePlaylist = false,
+    this.playlistId,
   });
 
   @override
@@ -31,21 +38,25 @@ class TrackTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         child: Row(
           children: [
-            // Artwork
+            // Artwork (unchanged)
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: SizedBox(
                 width: 55,
                 height: 55,
-                child: _Artwork(
-                  key: ValueKey(songId), // IMPORTANT FIX
-                  songId: songId,
-                  placeholder: Container(
-                    height: 55,
-                    width: 55,
-                    color: scheme.surfaceContainerHighest,
-                    child: Icon(Icons.music_note,
-                        color: scheme.onSurfaceVariant),
+                child: RepaintBoundary(
+                  child: _Artwork(
+                    key: ValueKey(songId),
+                    songId: songId,
+                    placeholder: Container(
+                      height: 55,
+                      width: 55,
+                      color: scheme.surfaceContainerHighest,
+                      child: Icon(
+                        Icons.music_note,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -63,17 +74,20 @@ class TrackTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurface,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     artist,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -81,7 +95,14 @@ class TrackTile extends StatelessWidget {
 
             const SizedBox(width: 10),
 
-            _FavoriteButton(songId: songId),
+            // Pass playlist context into the popup menu
+            _PopupMenu(
+              songId: songId,
+              title: title,
+              artist: artist,
+              insidePlaylist: insidePlaylist,
+              playlistId: playlistId,
+            ),
           ],
         ),
       ),
@@ -89,8 +110,9 @@ class TrackTile extends StatelessWidget {
   }
 }
 
+//
 // ------------------------------------------------------------
-// ARTWORK WIDGET – FIXED & REBUILDS CORRECTLY
+// ARTWORK WIDGET – Uses AudioPlayerController artwork cache
 // ------------------------------------------------------------
 class _Artwork extends StatefulWidget {
   final int songId;
@@ -109,87 +131,198 @@ class _Artwork extends StatefulWidget {
 class _ArtworkState extends State<_Artwork> {
   Uri? _uri;
   bool _loading = false;
+  bool _exists = false;
 
   @override
   void initState() {
     super.initState();
-    _loadArtwork();
+    _load();
   }
 
   @override
-  void didUpdateWidget(covariant _Artwork oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    if (oldWidget.songId != widget.songId) {
+  void didUpdateWidget(covariant _Artwork old) {
+    super.didUpdateWidget(old);
+    if (old.songId != widget.songId) {
       _uri = null;
+      _exists = false;
       _loading = false;
-      _loadArtwork();
+      _load();
     }
   }
 
-  void _loadArtwork() {
+  void _load() {
     final ctrl = context.read<AudioPlayerController>();
 
+    // Check cache first
     final cached = ctrl.getCachedArtworkUri(widget.songId);
     if (cached != null) {
-      _uri = cached;
-      if (mounted) setState(() {});
-      return;
+      final file = File.fromUri(cached);
+      if (file.existsSync()) {
+        _uri = cached;
+        _exists = true;
+        if (mounted) setState(() {});
+        return;
+      }
     }
 
-    if (!_loading) {
-      _loading = true;
-      ctrl.ensureArtworkForId(widget.songId).then((uri) {
-        if (mounted) {
-          setState(() {
-            _uri = uri;
-            _loading = false;
-          });
-        }
-      });
-    }
+    if (_loading) return;
+    _loading = true;
+
+    ctrl.ensureArtworkForId(widget.songId).then((uri) {
+      if (!mounted) return;
+      _uri = uri;
+      _exists = uri != null && File.fromUri(uri).existsSync();
+      _loading = false;
+      setState(() {});
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_uri != null) {
-      final file = File.fromUri(_uri!);
-      if (file.existsSync()) {
-        return Image.file(file, fit: BoxFit.cover);
-      }
+    if (_uri != null && _exists) {
+      return Image.file(
+        File.fromUri(_uri!),
+        fit: BoxFit.cover,
+      );
     }
-
     return widget.placeholder;
   }
 }
 
+//
 // ------------------------------------------------------------
-// FAVORITE BUTTON
+// MENU
 // ------------------------------------------------------------
-class _FavoriteButton extends StatelessWidget {
-  final int songId;
 
-  const _FavoriteButton({required this.songId});
+class _PopupMenu extends StatelessWidget {
+  final int songId;
+  final String title;
+  final String artist;
+  final bool insidePlaylist;
+  final String? playlistId;
+
+  const _PopupMenu({
+    required this.songId,
+    required this.title,
+    required this.artist,
+    this.insidePlaylist = false,
+    this.playlistId,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final fav = context.watch<FavoritesController>();
+    final isFav = fav.isFavorite(songId);
     final scheme = Theme.of(context).colorScheme;
+    final playlistCtrl = context.read<PlaylistController>();
 
-    return Selector<FavoritesController, bool>(
-      selector: (_, fav) => fav.isFavorite(songId),
-      builder: (_, isFav, __) {
-        return GestureDetector(
-          onTap: () => context.read<FavoritesController>().toggleFavorite(songId),
-          child: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, anim) =>
-                ScaleTransition(scale: anim, child: child),
-            child: Icon(
-              isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-              key: ValueKey(isFav),
-              color: isFav ? scheme.primary : scheme.onSurfaceVariant.withValues(alpha: 0.6),
-              size: 26,
-            ),
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+      onSelected: (value) async {
+        switch (value) {
+          case 'fav':
+            fav.toggleFavorite(songId);
+            break;
+          case 'addPlaylist':
+            _openAddToPlaylist(context, songId);
+            break;
+          case 'removePlaylist':
+            if (insidePlaylist && playlistId != null) {
+              playlistCtrl.removeSong(playlistId!, songId);
+              // optional: show a snackbar for feedback
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Removed from playlist')),
+              );
+            }
+            break;
+          case 'share':
+            // implement share if you add share_plus
+            break;
+          case 'delete':
+            // optional: delete file (requires permission & caution)
+            break;
+        }
+      },
+      itemBuilder: (_) => <PopupMenuEntry<String>>[
+        PopupMenuItem(
+          value: 'fav',
+          child: Text(isFav ? 'Remove from Favorites' : 'Add to Favorites'),
+        ),
+        const PopupMenuItem(
+          value: 'addPlaylist',
+          child: Text('Add to Playlist'),
+        ),
+        if (insidePlaylist)
+          const PopupMenuItem(
+            value: 'removePlaylist',
+            child: Text('Remove from this Playlist'),
+          ),
+        const PopupMenuItem(
+          value: 'share',
+          child: Text('Share'),
+        ),
+        const PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete'),
+        ),
+      ],
+    );
+  }
+
+  void _openAddToPlaylist(BuildContext ctx, int songId) {
+    final playlists = ctx.read<PlaylistController>().playlists;
+
+    showModalBottomSheet(
+      context: ctx,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (bottomCtx) {
+        return SizedBox(
+          height: 380,
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text("Add to Playlist",
+                    style: Theme.of(ctx)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: playlists.length,
+                  itemBuilder: (_, i) {
+                    final p = playlists[i];
+                    final exists = p.songIds.contains(songId);
+
+                    return ListTile(
+                      title: Text(p.name),
+                      subtitle: Text("${p.songIds.length} songs"),
+                      trailing: exists ? const Icon(Icons.check, color: Colors.green) : null,
+                      onTap: () {
+                        if (!exists) {
+                          ctx.read<PlaylistController>().addSong(p.id, songId);
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(content: Text('Added to "${p.name}"')),
+                          );
+                        }
+                        Navigator.pop(bottomCtx);
+                      },
+                    );
+                  },
+                ),
+              ),
+              if (playlists.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('No playlists yet. Create one from Playlists tab.',
+                      style: TextStyle(color: Theme.of(ctx).colorScheme.onSurfaceVariant)),
+                ),
+            ],
           ),
         );
       },
