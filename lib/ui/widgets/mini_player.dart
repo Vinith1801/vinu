@@ -61,7 +61,7 @@ class _MiniPlayerState extends State<MiniPlayer>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    expandedHeight = MediaQuery.of(context).size.height * 0.82;
+    expandedHeight = MediaQuery.of(context).size.height;
   }
 
   @override
@@ -78,7 +78,7 @@ class _MiniPlayerState extends State<MiniPlayer>
       begin: heightNotifier.value,
       end: target,
     ).animate(
-      CurvedAnimation(parent: snapCtrl, curve: Curves.linear),
+      CurvedAnimation(parent: snapCtrl, curve: Curves.easeOutCubic),
     );
     snapCtrl.forward(from: 0);
   }
@@ -108,7 +108,9 @@ class _MiniPlayerState extends State<MiniPlayer>
                 width: 50,
                 decoration: BoxDecoration(
                   color: scheme.outline.withValues(alpha: 0.04),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -290,7 +292,9 @@ class _MiniPlayerState extends State<MiniPlayer>
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.vertical(
+              top: Radius.circular(26),
+            ),
             child: SizedBox(
               width: 58,
               height: 58,
@@ -364,166 +368,166 @@ class _MiniPlayerState extends State<MiniPlayer>
   Widget _full(AudioPlayerController c, ColorScheme scheme) {
     final song = c.currentSong!;
 
-    return Column(
+    return SafeArea(
+      top: false,
+      child: Column(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
 
-                // TOP ROW: COLLAPSE ARROW
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      size: 32,
-                      color: scheme.onSurface,
+        // TOP SECTION: Collapse Button
+        Padding(
+          padding: const EdgeInsets.only(left: 6, top: 10),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 32,
+                color: scheme.onSurface,
+              ),
+              onPressed: () {
+                _snapTo(collapsedHeight);
+                heightNotifier.value = collapsedHeight;
+              },
+            ),
+          ),
+        ),
+
+        // CENTER SECTION: Vinyl + Info
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 320,
+              height: 320,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Center(
+                    child: Selector<AudioPlayerController, bool>(
+                      selector: (_, c) => c.isPlaying,
+                      builder: (_, isPlaying, __) {
+                        if (isPlaying) {
+                          if (!rotateCtrl.isAnimating) rotateCtrl.repeat();
+                          tonearmCtrl.forward();
+                        } else {
+                          rotateCtrl.stop();
+                          tonearmCtrl.reverse();
+                        }
+                        return RotationTransition(
+                          turns: rotateCtrl,
+                          child: _vinylCached ?? const SizedBox.shrink(),
+                        );
+                      },
                     ),
-                    onPressed: () {
-                      _snapTo(collapsedHeight);
-                      heightNotifier.value = collapsedHeight;
-                    },
                   ),
-                ),
+                  Positioned(
+                    right: -18,
+                    top: -18,
+                    child: AnimatedBuilder(
+                      animation: tonearmCtrl,
+                      builder: (_, child) {
+                        return Transform.rotate(
+                          angle: -0.6 + tonearmCtrl.value * 0.55,
+                          alignment: Alignment.topLeft,
+                          child: child,
+                        );
+                      },
+                      child: _buildTonearm(scheme),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-                const SizedBox(height: 12),
+            const SizedBox(height: 24),
 
-                // VINYL DISC CENTERED
-                SizedBox(
-                  width: 320,
-                  height: 320,
-                  child: Stack(
-                    clipBehavior: Clip.none,
+            Text(
+              song.title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: scheme.onSurface,
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            Text(
+              song.artist ?? "Unknown Artist",
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+
+        // BOTTOM SECTION: Favorite + Seek + Controls
+        Padding(
+          padding: const EdgeInsets.only(bottom: 26),
+          child: Column(
+            children: [
+              Padding(
+                  padding: const EdgeInsets.only(right: 40),
+                  child: Row(
                     children: [
-                      Center(
-                        child: Selector<AudioPlayerController, bool>(
-                          selector: (_, c) => c.isPlaying,
-                          builder: (_, isPlaying, __) {
-                            if (isPlaying) {
-                              if (!rotateCtrl.isAnimating) {
-                                rotateCtrl.repeat();
-                              }
-                              tonearmCtrl.forward();
-                            } else {
-                              rotateCtrl.stop();
-                              tonearmCtrl.reverse();
-                            }
-
-                            return RotationTransition(
-                              turns: rotateCtrl,
-                              child: _vinylCached ?? const SizedBox.shrink(),
-                            );
-                          },
-                        ),
-                      ),
-
-                      Positioned(
-                        right: -18,
-                        top: -18,
-                        child: AnimatedBuilder(
-                          animation: tonearmCtrl,
-                          builder: (_, child) {
-                            return Transform.rotate(
-                              angle: -0.6 + tonearmCtrl.value * 0.55,
-                              alignment: Alignment.topLeft,
-                              child: child,
-                            );
-                          },
-                          child: _buildTonearm(scheme),
-                        ),
+                      const Spacer(),
+                      Selector<FavoritesController, bool>(
+                        selector: (_, fav) => fav.isFavorite(c.currentSong!.id),
+                        builder: (_, isFav, __) {
+                          return GestureDetector(
+                            onTap: () => context
+                                .read<FavoritesController>()
+                                .toggleFavorite(c.currentSong!.id),
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 250),
+                              child: Icon(
+                                isFav
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                key: ValueKey(isFav),
+                                size: 32,
+                                color: isFav
+                                    ? scheme.primary
+                                    : scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 26),
+                const SizedBox(height: 12),
 
-                // TITLE + ARTIST
-                Text(
-                  song.title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  song.artist ?? "Unknown Artist",
-                  style: TextStyle(
-                    color: scheme.onSurfaceVariant,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+              StreamBuilder<PositionData>(
+                stream: c.smoothPositionStream,
+                builder: (_, snap) {
+                  final position = snap.data?.position ?? Duration.zero;
+                  final duration = snap.data?.duration ?? Duration.zero;
 
-                const SizedBox(height: 26),
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: SeekBar(
+                      position: position,
+                      duration: duration,
+                      onChangeEnd: c.seek,
+                    ),
+                  );
+                },
+              ),
 
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Selector<FavoritesController, bool>(
-                    selector: (_, fav) => fav.isFavorite(c.currentSong!.id),
-                    builder: (_, isFav, __) {
-                      return GestureDetector(
-                        onTap: () {
-                          context.read<FavoritesController>()
-                              .toggleFavorite(c.currentSong!.id);
-                        },
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          transitionBuilder: (child, anim) =>
-                              ScaleTransition(scale: anim, child: child),
-                          child: Icon(
-                            isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                            key: ValueKey(isFav),
-                            size: 32,
-                            color: isFav ? scheme.primary : scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                // SEEK 
-                RepaintBoundary(
-                  child: StreamBuilder<PositionData>(
-                    stream: c.smoothPositionStream,
-                    builder: (_, snap) {
-                      final position = snap.data?.position ?? Duration.zero;
-                      final duration = snap.data?.duration ?? Duration.zero;
+              const SizedBox(height: 18),
 
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: SeekBar(
-                              position: position,
-                              duration: duration,
-                              onChangeEnd: c.seek,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                        ],
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // PLAYBACK CONTROLS
-                _controls(c, scheme),
-
-                const SizedBox(height: 22),
-              ],
-            ),
+              _controls(c, scheme),
+            ],
           ),
         ),
       ],
+    )
     );
   }
 
@@ -661,7 +665,9 @@ class _MiniPlayerState extends State<MiniPlayer>
               height: 110,
               decoration: BoxDecoration(
                 color: armColor,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(26),
+                ),
               ),
             ),
           ),
@@ -675,7 +681,9 @@ class _MiniPlayerState extends State<MiniPlayer>
                 height: 20,
                 decoration: BoxDecoration(
                   color: armColor,
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26),
+                  ),
                 ),
               ),
             ),

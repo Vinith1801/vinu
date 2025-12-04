@@ -84,15 +84,8 @@ class VinuMusicApp extends StatelessWidget {
           ),
 
           home: const Scaffold(
-            body: Stack(
-              children: [
-                HomeScreen(),
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: MiniPlayer(),
-                ),
-              ],
-            ),
+            body: HomeScreen(),
+            bottomNavigationBar: MiniPlayer(),
           ),
         );
       },

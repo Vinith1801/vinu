@@ -154,13 +154,86 @@ class _AppearanceCardState extends State<_AppearanceCard> {
 ////////////////////////////////////////////////////////////////////////////
 /// VISIBILITY CARD (tabs + per-folder scanning toggles)
 ////////////////////////////////////////////////////////////////////////////
-class _VisibilityCard extends StatelessWidget {
+class _ExpandableSection extends StatelessWidget {
+  final String title;
+  final String summary;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final Widget child;
+
+  const _ExpandableSection({
+    required this.title,
+    required this.summary,
+    required this.expanded,
+    required this.onToggle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: scheme.onSurface)),
+                        const SizedBox(height: 4),
+                        Text(summary,
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: scheme.onSurfaceVariant)),
+                      ]),
+                ),
+                Icon(
+                  expanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
+                  color: scheme.onSurfaceVariant,
+                )
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: child,
+          crossFadeState:
+              expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
+      ],
+    );
+  }
+}
+
+
+class _VisibilityCard extends StatefulWidget {
   const _VisibilityCard();
 
-  String _basename(String path) {
-    // cross-platform path basename
-    return path.split(RegExp(r'[\\/]+')).last;
-  }
+  @override
+  State<_VisibilityCard> createState() => _VisibilityCardState();
+}
+
+class _VisibilityCardState extends State<_VisibilityCard> {
+  bool tabsExpanded = false;
+  bool foldersExpanded = false;
+
+  String _basename(String path) =>
+      path.split(RegExp(r'[\\/]+')).last;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +242,6 @@ class _VisibilityCard extends StatelessWidget {
 
     final showFoldersUI = ctrl.visibleTabs["Folders"] == true;
 
-    // Prepare a sorted list of folders for stable UI order
     final folderEntries = ctrl.folderMap.entries.toList()
       ..sort((a, b) {
         final aName = _basename(a.key).toLowerCase();
@@ -177,69 +249,119 @@ class _VisibilityCard extends StatelessWidget {
         return aName.compareTo(bName);
       });
 
+    final enabledTabs = ctrl.visibleTabs.entries
+        .where((e) => e.value)
+        .map((e) => e.key)
+        .join(", ");
+
+    final folderSummary = showFoldersUI
+        ? "${folderEntries.where((e) => e.value).length} folders scanned"
+        : "Disabled";
+
     return _CardContainer(
       title: "Library Visibility",
       subtitle: "Home tabs and per-folder scanning",
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tabs section
-          Text("Home Tabs", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-          const SizedBox(height: 8),
 
-          ...ctrl.visibleTabs.entries.map((entry) {
-            return SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(entry.key, style: TextStyle(color: scheme.onSurface)),
-              value: entry.value,
-              onChanged: (_) => ctrl.toggleTab(entry.key),
-            );
-          }).toList(),
-
-          // If Folders tab hidden, show helpful note and skip folder UI
-          if (!showFoldersUI) ...[
-            const SizedBox(height: 16),
-            Text(
-              "Folder scanning is hidden because the Folders tab is disabled.",
-              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+          // Home Tabs Section
+          _ExpandableSection(
+            title: "Home Tabs",
+            summary: enabledTabs.isEmpty ? "None enabled" : enabledTabs,
+            expanded: tabsExpanded,
+            onToggle: () => setState(() => tabsExpanded = !tabsExpanded),
+            child: Column(
+              children: ctrl.visibleTabs.entries.map((entry) {
+                return SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(entry.key,
+                      style: TextStyle(color: scheme.onSurface)),
+                  value: entry.value,
+                  onChanged: (_) => ctrl.toggleTab(entry.key),
+                );
+              }).toList(),
             ),
-            const SizedBox(height: 8),
-            Text(
-              "Re-enable the Folders tab above to configure per-folder scanning.",
-              style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant.withValues(alpha: 0.9)),
+          ),
+
+          const Divider(height: 26),
+
+          // Folder Scanning Section
+          _ExpandableSection(
+            title: "Folder Scanning",
+            summary: folderSummary,
+            expanded: foldersExpanded,
+            onToggle: () => setState(() => foldersExpanded = !foldersExpanded),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                if (!showFoldersUI) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: scheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      "Folder scanning is hidden because the Folders tab is disabled.\nEnable it above to configure folder visibility.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+
+                if (showFoldersUI) ...[
+                  if (folderEntries.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        "No folders detected yet.",
+                        style: TextStyle(
+                            color: scheme.onSurfaceVariant, fontSize: 13),
+                      ),
+                    ),
+
+                  ...folderEntries.map((entry) {
+                    final path = entry.key;
+                    final enabled = entry.value;
+                    final pretty = _basename(path);
+                    final count = ctrl.folderSongCount[path] ?? 0;
+
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.folder, color: scheme.primary),
+                      title: Text(pretty),
+                      subtitle: Text("$count songs • $path",
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: scheme.onSurfaceVariant)),
+                      trailing: Switch(
+                        value: enabled,
+                        onChanged: (_) => ctrl.toggleFolder(path),
+                      ),
+                    );
+                  }),
+
+                  const SizedBox(height: 12),
+                  TextButton.icon(
+                    onPressed: ctrl.refreshFolders,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text("Refresh folders"),
+                  ),
+                ]
+              ],
             ),
-          ],
-
-          // Folder scanning UI (only when Folders tab visible)
-          if (showFoldersUI) ...[
-            const Divider(height: 28),
-            Text("Folder Scanning", style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-            const SizedBox(height: 8),
-
-            if (folderEntries.isEmpty)
-              Text("No folders detected yet.", style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13)),
-
-            ...folderEntries.map((entry) {
-              final path = entry.key;
-              final enabled = entry.value;
-              final pretty = _basename(path);
-              final count = ctrl.folderSongCount[path] ?? 0;
-              final subtitle = "$count song${count == 1 ? '' : 's'} • $path";
-
-              return SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(pretty.isNotEmpty ? pretty : path, style: TextStyle(color: scheme.onSurface)),
-                subtitle: Text(subtitle, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 12)),
-                value: enabled,
-                onChanged: (_) => ctrl.toggleFolder(path),
-              );
-            }).toList(),
-          ],
+          ),
         ],
       ),
     );
   }
 }
+
 
 ////////////////////////////////////////////////////////////////////////////
 /// LIBRARY CARD

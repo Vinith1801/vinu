@@ -28,86 +28,95 @@ class TrackTile extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+Widget build(BuildContext context) {
+  final scheme = Theme.of(context).colorScheme;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            // Artwork (unchanged)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: SizedBox(
-                width: 55,
-                height: 55,
-                child: RepaintBoundary(
-                  child: _Artwork(
-                    key: ValueKey(songId),
-                    songId: songId,
-                    placeholder: Container(
-                      height: 55,
-                      width: 55,
-                      color: scheme.surfaceContainerHighest,
-                      child: Icon(
-                        Icons.music_note,
-                        color: scheme.onSurfaceVariant,
+  return Column(
+    children: [
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              // Artwork
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 55,
+                  height: 55,
+                  child: RepaintBoundary(
+                    child: _Artwork(
+                      key: ValueKey(songId),
+                      songId: songId,
+                      placeholder: Container(
+                        height: 55,
+                        width: 55,
+                        color: scheme.surfaceContainerHighest,
+                        child: Icon(
+                          Icons.music_note,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-            const SizedBox(width: 14),
+              const SizedBox(width: 14),
 
-            // TITLE + ARTIST
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurface,
+              // Title + Artist
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    artist,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: scheme.onSurfaceVariant,
+                    const SizedBox(height: 2),
+                    Text(
+                      artist,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(width: 10),
+              const SizedBox(width: 10),
 
-            // Pass playlist context into the popup menu
-            _PopupMenu(
-              songId: songId,
-              title: title,
-              artist: artist,
-              insidePlaylist: insidePlaylist,
-              playlistId: playlistId,
-            ),
-          ],
+              _PopupMenu(
+                songId: songId,
+                title: title,
+                artist: artist,
+                insidePlaylist: insidePlaylist,
+                playlistId: playlistId,
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
+
+      const Divider(
+        height: 1,
+        thickness: 0.6,
+      ),
+    ],
+  );
+}
+
 }
 
 //

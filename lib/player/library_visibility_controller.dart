@@ -63,6 +63,19 @@ class LibraryVisibilityController extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ---------------------------------------------
+// Manually trigger folder refresh
+// Notifies HomeScreen to re-scan the library
+// ---------------------------------------------
+void refreshFolders() {
+  // Notify HomeScreen that a refresh is requested
+  onFolderSettingsChanged?.call();
+
+  // UI rebuild for consistency
+  notifyListeners();
+}
+
+
   // Save tab visibility
   Future<void> _saveTabs() async {
     final p = await SharedPreferences.getInstance();
