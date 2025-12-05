@@ -1,8 +1,12 @@
-//lib/theme/theme_controller.dart
+// lib/theme/theme_controller.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'app_color_set.dart';
 
 class ThemeController extends ChangeNotifier {
+  static const _kDark = 'theme.isDark';
+  static const _kIndex = 'theme.selectedIndex';
+
   bool isDark = false;
   int selectedIndex = 0;
 
@@ -142,18 +146,48 @@ class ThemeController extends ChangeNotifier {
     ),
   ];
 
-  AppColorSet get current => colorSets[selectedIndex];
+  ThemeController() {
+    _load();
+  }
+
+  AppColorSet get current => colorSets[selectedIndex.clamp(0, colorSets.length - 1)];
 
   Gradient? get currentGradient =>
       isDark ? current.gradientDark : current.gradientLight;
 
+  Future<void> _load() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      isDark = p.getBool(_kDark) ?? false;
+      selectedIndex = p.getInt(_kIndex) ?? 0;
+      // ensure index bounds
+      if (selectedIndex < 0 || selectedIndex >= colorSets.length) {
+        selectedIndex = 0;
+      }
+      notifyListeners();
+    } catch (_) {
+      // ignore errors: defaults already set
+    }
+  }
+
+  Future<void> _save() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      await p.setBool(_kDark, isDark);
+      await p.setInt(_kIndex, selectedIndex);
+    } catch (_) {}
+  }
+
   void toggleDarkMode() {
     isDark = !isDark;
+    _save();
     notifyListeners();
   }
 
   void setColorSet(int index) {
+    if (index < 0 || index >= colorSets.length) return;
     selectedIndex = index;
+    _save();
     notifyListeners();
   }
 }

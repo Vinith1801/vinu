@@ -65,26 +65,26 @@ class AudioPlayerController extends ChangeNotifier {
 
     _artDir = await _getArtDirectory();
 
-    // current index updates only when track changes
+    // Track index updates
     _indexSub = player.currentIndexStream.listen((index) {
       if (index == null) return;
       currentIndex = index;
-      notifyListeners(); // track changed -> update mini player, etc.
+      notifyListeners();
     });
 
-    // NEW: subscribe to playing state with minimal notifications
+    // Play/pause updates
     _isPlaying = player.playing;
     _playingSub = player.playingStream.listen((playing) {
       if (playing == _isPlaying) return;
       _isPlaying = playing;
-      notifyListeners(); // only when play/pause toggles
+      notifyListeners();
     });
   }
 
   // ---------------------------------------------------------
   // GETTERS
   // ---------------------------------------------------------
-   SongModel? get currentSong {
+  SongModel? get currentSong {
     if (playlist.isEmpty) return null;
     if (currentIndex < 0 || currentIndex >= playlist.length) {
       currentIndex = 0;
@@ -94,13 +94,12 @@ class AudioPlayerController extends ChangeNotifier {
 
   int? get currentSongId => currentSong?.id;
 
-  // use cached state instead of hitting player each build
   bool get isPlaying => _isPlaying;
 
   Stream<bool> get playingStream => player.playingStream;
 
   // ---------------------------------------------------------
-  // THROTTLE STREAM (reduces UI rebuilds)
+  // POSITION STREAM (throttled)
   // ---------------------------------------------------------
   StreamTransformer<T, T> _throttle<T>(Duration duration) {
     return StreamTransformer<T, T>.fromBind((stream) {
@@ -119,20 +118,18 @@ class AudioPlayerController extends ChangeNotifier {
 
   Stream<PositionData>? _throttledPositionStream;
 
-Stream<PositionData> get smoothPositionStream {
-  _ensurePositionStream(); // makes sure raw stream exists
+  Stream<PositionData> get smoothPositionStream {
+    _ensurePositionStream();
 
-  _throttledPositionStream ??= _posCtrl!
-      .stream
-      .transform(_throttle(const Duration(milliseconds: 120)))
-      .asBroadcastStream();
+    _throttledPositionStream ??= _posCtrl!
+        .stream
+        .transform(_throttle(const Duration(milliseconds: 120)))
+        .asBroadcastStream();
 
-  return _throttledPositionStream!;
-}
+    return _throttledPositionStream!;
+  }
 
-  // ---------------------------------------------------------
-  // POSITION STREAM
-  // ---------------------------------------------------------
+  // Raw position stream
   Stream<PositionData> get positionDataStream {
     _ensurePositionStream();
     return _posCtrl!.stream;
@@ -187,6 +184,7 @@ Stream<PositionData> get smoothPositionStream {
   }
 
   Uri? getCachedArtworkUri(int id) => _artCache[id];
+
   final Map<int, Future<Uri?>> _artFetchFutures = {};
 
   Future<Uri?> ensureArtworkForId(int songId) async {
@@ -210,7 +208,7 @@ Stream<PositionData> get smoothPositionStream {
       }
 
       final bytes = await _audioQuery.queryArtwork(songId, ArtworkType.AUDIO);
-      if (bytes == null) {
+      if (bytes == null || bytes.isEmpty) {
         _artCache[songId] = null;
         completer.complete(null);
         return null;
@@ -230,8 +228,25 @@ Stream<PositionData> get smoothPositionStream {
     }
   }
 
+  Future<void> preloadArtworkForQueue() async {
+    if (playlist.isEmpty) return;
+
+    final futures = <Future<Uri?>>[];
+
+    for (final song in playlist) {
+      if (!_artCache.containsKey(song.id)) {
+        futures.add(ensureArtworkForId(song.id));
+      }
+    }
+
+    // Load everything in background, then refresh UI
+    Future.wait(futures).then((_) {
+      notifyListeners();
+    });
+  }
+
   // ---------------------------------------------------------
-  // PLAYLIST SETTER — ***FAST, NON-BLOCKING VERSION***
+  // PLAYLIST SETTER
   // ---------------------------------------------------------
   Future<void> setPlaylist(
     List<SongModel> songs, {
@@ -241,31 +256,24 @@ Stream<PositionData> get smoothPositionStream {
 
     final safeIndex = initialIndex.clamp(0, songs.length - 1);
 
-    // If it's the same playlist by IDs, just jump to the new index
+    // If same playlist → just jump
     if (_samePlaylistById(playlist, songs)) {
       _rebuildIdLookup(songs);
       await playIndex(safeIndex);
       return;
     }
 
-    // Copy + rebuild lookup
     playlist = List<SongModel>.from(songs);
     _rebuildIdLookup(playlist);
 
-    // -------------------------------------------------
-    // 1) Fetch all artwork in parallel (not sequential)
-    // -------------------------------------------------
+    // Preload artwork in parallel
     final futures = <Future<Uri?>>[];
     for (final song in playlist) {
       futures.add(ensureArtworkForId(song.id));
     }
 
-    // This runs all artwork lookups concurrently
     final artUris = await Future.wait(futures);
 
-    // -------------------------------------------------
-    // 2) Build sources from songs + artwork
-    // -------------------------------------------------
     final sources = <AudioSource>[];
 
     for (int i = 0; i < playlist.length; i++) {
@@ -289,9 +297,6 @@ Stream<PositionData> get smoothPositionStream {
       );
     }
 
-    // -------------------------------------------------
-    // 3) Apply to player and start playback
-    // -------------------------------------------------
     await player.setAudioSources(
       sources,
       initialIndex: safeIndex,
@@ -302,7 +307,6 @@ Stream<PositionData> get smoothPositionStream {
     notifyListeners();
     await player.play();
   }
-
 
   bool _samePlaylistById(List<SongModel> a, List<SongModel> b) {
     if (a.length != b.length) return false;
@@ -343,7 +347,6 @@ Stream<PositionData> get smoothPositionStream {
     } else {
       player.play();
     }
-    // playingStream subscription will handle notifyListeners
   }
 
   void next() => player.seekToNext();

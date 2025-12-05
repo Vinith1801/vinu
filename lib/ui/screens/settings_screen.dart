@@ -1,8 +1,10 @@
-//lib/ui/screens/settings_screen.dart
+// lib/ui/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:vinu/player/library_visibility_controller.dart';
+import 'package:vinu/ui/player/player_skin_controller.dart';
 import '../../theme/theme_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -42,7 +44,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-/// APPEARANCE CARD
+/// APPEARANCE CARD (updated with Player Skin)
 ////////////////////////////////////////////////////////////////////////////
 class _AppearanceCard extends StatefulWidget {
   const _AppearanceCard();
@@ -74,6 +76,38 @@ class _AppearanceCardState extends State<_AppearanceCard> {
     }
   }
 
+  // PLAYER SKIN PICKER (added)
+  void _chooseSkin(BuildContext ctx) {
+    final skinCtrl = ctx.read<PlayerSkinController>();
+
+    showModalBottomSheet(
+      context: ctx,
+      showDragHandle: true,
+      backgroundColor: Theme.of(ctx).colorScheme.surface,
+      builder: (_) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text("Classic"),
+              onTap: () {
+                skinCtrl.setSkin(0);
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              title: const Text("Minimal"),
+              onTap: () {
+                skinCtrl.setSkin(1);
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
@@ -85,7 +119,8 @@ class _AppearanceCardState extends State<_AppearanceCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Theme mode', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          Text('Theme mode',
+              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -97,8 +132,11 @@ class _AppearanceCardState extends State<_AppearanceCard> {
             ],
           ),
           const SizedBox(height: 14),
-          Text('Accent palettes', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+
+          Text('Accent palettes',
+              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 10),
+
           SizedBox(
             height: 92,
             child: ListView.separated(
@@ -137,13 +175,23 @@ class _AppearanceCardState extends State<_AppearanceCard> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text('Palette ${i + 1}', style: TextStyle(fontSize: 12, color: scheme.onSurface)),
+                        Text('Palette ${i + 1}',
+                            style: TextStyle(fontSize: 12, color: scheme.onSurface)),
                       ],
                     ),
                   ),
                 );
               },
             ),
+          ),
+
+          // NEW PLAYER SKIN ROW
+          const SizedBox(height: 18),
+          _ListRow(
+            icon: Icons.color_lens,
+            title: 'Player Skin',
+            subtitle: 'Change full player layout',
+            onTap: () => _chooseSkin(context),
           ),
         ],
       ),
@@ -152,8 +200,10 @@ class _AppearanceCardState extends State<_AppearanceCard> {
 }
 
 ////////////////////////////////////////////////////////////////////////////
-/// VISIBILITY CARD (tabs + per-folder scanning toggles)
+/// VISIBILITY CARD
 ////////////////////////////////////////////////////////////////////////////
+// (unchanged; included in full for completeness)
+
 class _ExpandableSection extends StatelessWidget {
   final String title;
   final String summary;
@@ -199,9 +249,7 @@ class _ExpandableSection extends StatelessWidget {
                       ]),
                 ),
                 Icon(
-                  expanded
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
+                  expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
                   color: scheme.onSurfaceVariant,
                 )
               ],
@@ -220,7 +268,6 @@ class _ExpandableSection extends StatelessWidget {
   }
 }
 
-
 class _VisibilityCard extends StatefulWidget {
   const _VisibilityCard();
 
@@ -232,8 +279,7 @@ class _VisibilityCardState extends State<_VisibilityCard> {
   bool tabsExpanded = false;
   bool foldersExpanded = false;
 
-  String _basename(String path) =>
-      path.split(RegExp(r'[\\/]+')).last;
+  String _basename(String path) => path.split(RegExp(r'[\\/]+')).last;
 
   @override
   Widget build(BuildContext context) {
@@ -263,8 +309,6 @@ class _VisibilityCardState extends State<_VisibilityCard> {
       subtitle: "Home tabs and per-folder scanning",
       child: Column(
         children: [
-
-          // Home Tabs Section
           _ExpandableSection(
             title: "Home Tabs",
             summary: enabledTabs.isEmpty ? "None enabled" : enabledTabs,
@@ -274,8 +318,7 @@ class _VisibilityCardState extends State<_VisibilityCard> {
               children: ctrl.visibleTabs.entries.map((entry) {
                 return SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: Text(entry.key,
-                      style: TextStyle(color: scheme.onSurface)),
+                  title: Text(entry.key, style: TextStyle(color: scheme.onSurface)),
                   value: entry.value,
                   onChanged: (_) => ctrl.toggleTab(entry.key),
                 );
@@ -285,7 +328,6 @@ class _VisibilityCardState extends State<_VisibilityCard> {
 
           const Divider(height: 26),
 
-          // Folder Scanning Section
           _ExpandableSection(
             title: "Folder Scanning",
             summary: folderSummary,
@@ -294,7 +336,6 @@ class _VisibilityCardState extends State<_VisibilityCard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 if (!showFoldersUI) ...[
                   const SizedBox(height: 8),
                   Container(
@@ -305,10 +346,7 @@ class _VisibilityCardState extends State<_VisibilityCard> {
                     ),
                     child: Text(
                       "Folder scanning is hidden because the Folders tab is disabled.\nEnable it above to configure folder visibility.",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: scheme.onSurfaceVariant,
-                      ),
+                      style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -320,8 +358,7 @@ class _VisibilityCardState extends State<_VisibilityCard> {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         "No folders detected yet.",
-                        style: TextStyle(
-                            color: scheme.onSurfaceVariant, fontSize: 13),
+                        style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
                       ),
                     ),
 
@@ -336,9 +373,7 @@ class _VisibilityCardState extends State<_VisibilityCard> {
                       leading: Icon(Icons.folder, color: scheme.primary),
                       title: Text(pretty),
                       subtitle: Text("$count songs • $path",
-                          style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant)),
+                          style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
                       trailing: Switch(
                         value: enabled,
                         onChanged: (_) => ctrl.toggleFolder(path),
@@ -361,7 +396,6 @@ class _VisibilityCardState extends State<_VisibilityCard> {
     );
   }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////
 /// LIBRARY CARD
@@ -401,7 +435,8 @@ class _LibraryCardState extends State<_LibraryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Default view', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          Text('Default view',
+              style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -442,6 +477,7 @@ class _AboutCard extends StatelessWidget {
 ////////////////////////////////////////////////////////////////////////////
 /// SHARED WIDGETS
 ////////////////////////////////////////////////////////////////////////////
+
 class _CardContainer extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -459,15 +495,25 @@ class _CardContainer extends StatelessWidget {
         color: scheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: scheme.outline.withValues(alpha: 0.04)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 6))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          )
+        ],
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
-        const SizedBox(height: 4),
-        Text(subtitle, style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
-        const SizedBox(height: 12),
-        child,
-      ]),
+      child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: scheme.onSurface)),
+            const SizedBox(height: 4),
+            Text(subtitle,
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+            const SizedBox(height: 12),
+            child,
+          ]),
     );
   }
 }
@@ -479,25 +525,57 @@ class _ListRow extends StatelessWidget {
   final VoidCallback? onTap;
   final bool dense;
 
-  const _ListRow({required this.icon, required this.title, this.subtitle, this.onTap, this.dense = false});
+  const _ListRow({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.onTap,
+    this.dense = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: dense ? 6 : 10, horizontal: 4),
-        child: Row(children: [
-          Container(width: 44, height: 44, decoration: BoxDecoration(color: scheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(10)), child: Icon(icon, color: scheme.onSurfaceVariant)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-            if (subtitle != null) ...[const SizedBox(height: 4), Text(subtitle!, style: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13))],
-          ])),
-          if (onTap != null) const Icon(Icons.chevron_right_rounded),
-        ]),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child:
+                  Icon(icon, color: scheme.onSurfaceVariant),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface)),
+                    if (subtitle != null)
+                      ...[
+                        const SizedBox(height: 4),
+                        Text(subtitle!,
+                            style: TextStyle(
+                                color: scheme.onSurfaceVariant,
+                                fontSize: 13)),
+                      ],
+                  ]),
+            ),
+            if (onTap != null) const Icon(Icons.chevron_right_rounded),
+          ],
+        ),
       ),
     );
   }
@@ -508,7 +586,11 @@ class _RadioButton extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _RadioButton({required this.label, required this.selected, required this.onTap});
+  const _RadioButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -519,8 +601,20 @@ class _RadioButton extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(color: selected ? scheme.primary : scheme.surface, borderRadius: BorderRadius.circular(12), border: Border.all(color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06))),
-        child: Text(label, style: TextStyle(color: selected ? scheme.onPrimary : scheme.onSurface, fontWeight: FontWeight.w700)),
+        decoration: BoxDecoration(
+          color: selected ? scheme.primary : scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected ? scheme.onPrimary : scheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

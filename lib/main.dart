@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
 import 'package:vinu/player/library_visibility_controller.dart';
+import 'package:vinu/ui/player/player_skin_controller.dart';
 
 import 'player/audio_player_controller.dart';
 import 'player/favorites_controller.dart';
@@ -11,7 +12,7 @@ import 'player/library_controller.dart';
 import 'theme/theme_controller.dart';
 
 import 'ui/screens/home_screen.dart';
-import 'ui/widgets/mini_player.dart';
+import 'ui/player/player_container.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +33,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => PlaylistController()),
         ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
         ChangeNotifierProvider(create: (_) => LibraryController()..init()),
+        ChangeNotifierProvider(create: (_) => PlayerSkinController()),
       ],
       child: const VinuMusicApp(),
     ),
@@ -85,7 +87,7 @@ class VinuMusicApp extends StatelessWidget {
 
           home: const Scaffold(
             body: HomeScreen(),
-            bottomNavigationBar: MiniPlayer(),
+            bottomNavigationBar: PlayerContainer(),
           ),
         );
       },
