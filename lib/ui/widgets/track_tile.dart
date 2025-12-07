@@ -1,11 +1,11 @@
 // lib/ui/widgets/track_tile.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:on_audio_query/on_audio_query.dart';
 import 'package:vinu/player/playlist_controller.dart';
+import 'package:vinu/ui/widgets/artwork_loader.dart';
 
 import '../../player/favorites_controller.dart';
-import '../../player/audio_player_controller.dart';
 
 class TrackTile extends StatelessWidget {
   final String title;
@@ -28,180 +28,99 @@ class TrackTile extends StatelessWidget {
   });
 
   @override
-Widget build(BuildContext context) {
-  final scheme = Theme.of(context).colorScheme;
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
 
-  return Column(
-    children: [
-      InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(
-            children: [
-              // Artwork
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: SizedBox(
-                  width: 55,
-                  height: 55,
-                  child: RepaintBoundary(
-                    child: _Artwork(
-                      key: ValueKey(songId),
-                      songId: songId,
-                      placeholder: Container(
-                        height: 55,
-                        width: 55,
-                        color: scheme.surfaceContainerHighest,
-                        child: Icon(
-                          Icons.music_note,
-                          color: scheme.onSurfaceVariant,
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              children: [
+                // Artwork (unified)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox(
+                    width: 55,
+                    height: 55,
+                    child: RepaintBoundary(
+                      child: ArtworkLoader(
+                        id: songId,
+                        type: ArtworkType.AUDIO,
+                        size: 55,
+                        borderRadius: BorderRadius.circular(8),
+                        placeholder: Container(
+                          height: 55,
+                          width: 55,
+                          color: scheme.surfaceContainerHighest,
+                          child: Icon(
+                            Icons.music_note,
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
 
-              const SizedBox(width: 14),
+                const SizedBox(width: 14),
 
-              // Title + Artist
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: scheme.onSurface,
+                // Title + Artist
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      artist,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: scheme.onSurfaceVariant,
+                      const SizedBox(height: 2),
+                      Text(
+                        artist,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              const SizedBox(width: 10),
+                const SizedBox(width: 10),
 
-              _PopupMenu(
-                songId: songId,
-                title: title,
-                artist: artist,
-                insidePlaylist: insidePlaylist,
-                playlistId: playlistId,
-              ),
-            ],
+                _PopupMenu(
+                  songId: songId,
+                  title: title,
+                  artist: artist,
+                  insidePlaylist: insidePlaylist,
+                  playlistId: playlistId,
+                ),
+              ],
+            ),
           ),
         ),
-      ),
 
-      const Divider(
-        height: 1,
-        thickness: 0.6,
-      ),
-    ],
-  );
-}
-
-}
-
-//
-// ------------------------------------------------------------
-// ARTWORK WIDGET – Uses AudioPlayerController artwork cache
-// ------------------------------------------------------------
-class _Artwork extends StatefulWidget {
-  final int songId;
-  final Widget placeholder;
-
-  const _Artwork({
-    super.key,
-    required this.songId,
-    required this.placeholder,
-  });
-
-  @override
-  State<_Artwork> createState() => _ArtworkState();
-}
-
-class _ArtworkState extends State<_Artwork> {
-  Uri? _uri;
-  bool _loading = false;
-  bool _exists = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void didUpdateWidget(covariant _Artwork old) {
-    super.didUpdateWidget(old);
-    if (old.songId != widget.songId) {
-      _uri = null;
-      _exists = false;
-      _loading = false;
-      _load();
-    }
-  }
-
-  void _load() {
-    final ctrl = context.read<AudioPlayerController>();
-
-    // Check cache first
-    final cached = ctrl.getCachedArtworkUri(widget.songId);
-    if (cached != null) {
-      final file = File.fromUri(cached);
-      if (file.existsSync()) {
-        _uri = cached;
-        _exists = true;
-        if (mounted) setState(() {});
-        return;
-      }
-    }
-
-    if (_loading) return;
-    _loading = true;
-
-    ctrl.ensureArtworkForId(widget.songId).then((uri) {
-      if (!mounted) return;
-      _uri = uri;
-      _exists = uri != null && File.fromUri(uri).existsSync();
-      _loading = false;
-      setState(() {});
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_uri != null && _exists) {
-      return Image.file(
-        File.fromUri(_uri!),
-        fit: BoxFit.cover,
-      );
-    }
-    return widget.placeholder;
+        const Divider(
+          height: 1,
+          thickness: 0.6,
+        ),
+      ],
+    );
   }
 }
 
-//
-// ------------------------------------------------------------
-// MENU
-// ------------------------------------------------------------
+// ------------------ POPUP MENU remains unchanged ------------------
 
 class _PopupMenu extends StatelessWidget {
   final int songId;
@@ -238,7 +157,6 @@ class _PopupMenu extends StatelessWidget {
           case 'removePlaylist':
             if (insidePlaylist && playlistId != null) {
               playlistCtrl.removeSong(playlistId!, songId);
-              // optional: show a snackbar for feedback
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Removed from playlist')),
               );

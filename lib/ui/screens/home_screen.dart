@@ -1,8 +1,9 @@
 // lib/ui/screens/home_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
 import '../../player/library_visibility_controller.dart';
+import '../../player/library_controller.dart';
 import '../widgets/header.dart';
 
 // tabs
@@ -20,119 +21,80 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> 
+class _HomeScreenState extends State<HomeScreen>
     with TickerProviderStateMixin {
-  final OnAudioQuery _audioQuery = OnAudioQuery();
-
-  // MASTER lists – raw, unfiltered
-  List<SongModel> _allSongs = [];
-  List<ArtistModel> _allArtists = [];
-  List<AlbumModel> _allAlbums = [];
-
-  // Filtered / UI lists
-  List<SongModel> songs = [];
-  List<ArtistModel> artists = [];
-  List<AlbumModel> albums = [];
-  List<String> folders = [];
-
   TabController? _tabController;
-  bool _loading = true;
+
+  List<String> _cachedActiveTabs = [];
 
   @override
   void initState() {
     super.initState();
-    final visibility = context.read<LibraryVisibilityController>();
-    visibility.onFolderSettingsChanged = () {
-      if (!mounted) return;
-      _applyVisibilityFilters(visibility);
-    };
-    loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _ensureInitialApply());
+  }
+
+  Future<void> _ensureInitialApply() async {
+    final lib = context.read<LibraryController>();
+    final vis = context.read<LibraryVisibilityController>();
+
+    await lib.waitUntilReady();
+
+    await vis.registerFolders(Map<String, int>.from(lib.folderSongCount));
+
+    lib.applyVisibility(
+      folderScanEnabled: vis.folderScanEnabled,
+      enabledFolders: vis.enabledFolders,
+    );
+
+    _cachedActiveTabs = vis.activeTabs;
+
+    vis.addListener(_onVisibilityChanged);
+
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     try {
-      final visibility = context.read<LibraryVisibilityController>();
-      visibility.onFolderSettingsChanged = null;
+      final vis = context.read<LibraryVisibilityController>();
+      vis.removeListener(_onVisibilityChanged);
     } catch (_) {}
-
     _tabController?.dispose();
     super.dispose();
   }
 
-  // Build a new TabController when tabs change
-  void _rebuildTabs(List<String> tabs) {
+  void _onVisibilityChanged() {
+    final lib = context.read<LibraryController>();
+    final vis = context.read<LibraryVisibilityController>();
+
+    lib.applyVisibility(
+      folderScanEnabled: vis.folderScanEnabled,
+      enabledFolders: vis.enabledFolders,
+    );
+
+    final activeTabs = vis.activeTabs;
+    if (!listEquals(activeTabs, _cachedActiveTabs)) {
+      _syncTabs(activeTabs);
+    } else {
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _syncTabs(List<String> tabs) {
     _tabController?.dispose();
     _tabController = TabController(length: tabs.length, vsync: this);
-    setState(() {});
+    _cachedActiveTabs = List<String>.from(tabs);
+    if (mounted) setState(() {});
   }
 
-  // Safe, cross-platform folder extractor
-  String _folderFromPath(String path) {
-    final normalized = path.replaceAll("\\", "/");
-    final idx = normalized.lastIndexOf("/");
-    if (idx <= 0) return "";
-    return normalized.substring(0, idx);
-  }
-
-  Future<void> loadData() async {
-    try {
-      bool permission = await _audioQuery.permissionsStatus();
-      if (!permission) permission = await _audioQuery.permissionsRequest();
-      if (!permission) {
-        if (mounted) setState(() => _loading = false);
-        return;
-      }
-
-      final visibility = context.read<LibraryVisibilityController>();
-
-      // Only query the device ONCE
-      if (_allSongs.isEmpty) {
-        _allSongs = await _audioQuery.querySongs();
-        _allArtists = await _audioQuery.queryArtists();
-        _allAlbums = await _audioQuery.queryAlbums();
-
-        // Build folderCounts from master list
-        final Map<String, int> folderCounts = {};
-        for (var s in _allSongs) {
-          final folder = _folderFromPath(s.data);
-          if (folder.isEmpty) continue;
-          folderCounts[folder] = (folderCounts[folder] ?? 0) + 1;
-        }
-        await visibility.registerFolders(folderCounts);
-      }
-
-      // Now only re-filter based on visibility/folder toggles
-      _applyVisibilityFilters(visibility);
-    } catch (e, st) {
-      debugPrint("Error loading media: $e\n$st");
-      if (mounted) setState(() => _loading = false);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final vis = context.watch<LibraryVisibilityController>();
+    final activeTabs = vis.activeTabs;
+    if (_tabController == null || _tabController!.length != activeTabs.length) {
+      _syncTabs(activeTabs);
     }
-  }
-
-  void _applyVisibilityFilters(LibraryVisibilityController visibility) {
-    List<SongModel> filteredSongs = _allSongs;
-
-    if (visibility.folderScanEnabled && visibility.enabledFolders.isNotEmpty) {
-      final enabled = Set<String>.from(visibility.enabledFolders);
-
-      filteredSongs = _allSongs.where((s) {
-        final folder = _folderFromPath(s.data);
-        return enabled.contains(folder);
-      }).toList();
-    }
-
-    final enabledFolders = visibility.enabledFolders;
-
-    if (!mounted) return;
-
-    setState(() {
-      songs = filteredSongs;
-      artists = _allArtists;
-      albums = _allAlbums;
-      folders = enabledFolders;
-      _loading = false;
-    });
   }
 
   @override
@@ -140,10 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
     final visibility = context.watch<LibraryVisibilityController>();
     final activeTabs = visibility.activeTabs;
 
-    // Sync TabController
-    if (_tabController == null || _tabController!.length != activeTabs.length) {
-      _rebuildTabs(activeTabs);
-    }
+    final lib = context.watch<LibraryController>();
 
     if (activeTabs.isEmpty) {
       return Center(
@@ -157,14 +116,12 @@ class _HomeScreenState extends State<HomeScreen>
 
     final scheme = Theme.of(context).colorScheme;
     final text = scheme.onSurface;
-    final muted = text.withValues(alpha: 0.5);
+    final muted = text.withAlpha((0.5 * 255).toInt());
 
     return SafeArea(
       child: Column(
         children: [
-          const RepaintBoundary(
-          child: Header(),
-        ),
+          const RepaintBoundary(child: Header()),
           const SizedBox(height: 6),
 
           Padding(
@@ -174,7 +131,8 @@ class _HomeScreenState extends State<HomeScreen>
               isScrollable: true,
               labelColor: text,
               unselectedLabelColor: muted,
-              labelStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              labelStyle:
+                  const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               indicator: UnderlineTabIndicator(
                 borderSide: BorderSide(width: 3, color: scheme.primary),
                 insets: const EdgeInsets.symmetric(horizontal: 12),
@@ -185,7 +143,7 @@ class _HomeScreenState extends State<HomeScreen>
 
           const SizedBox(height: 12),
 
-          _loading
+          lib.loading
               ? const Expanded(child: Center(child: CircularProgressIndicator()))
               : Expanded(
                   child: RepaintBoundary(
@@ -194,23 +152,17 @@ class _HomeScreenState extends State<HomeScreen>
                       children: activeTabs.map((t) {
                         switch (t) {
                           case "Songs":
-                            return SongsTab(songs: songs);
-
+                            return SongsTab(songs: lib.filteredSongs);
                           case "Favorites":
-                            return FavoritesTab(songs: songs);
-
+                            return FavoritesTab(songs: lib.filteredSongs);
                           case "Playlists":
                             return const PlaylistsTab();
-
                           case "Artists":
-                            return ArtistsTab(artists: artists);
-
+                            return ArtistsTab(artists: lib.filteredArtists);
                           case "Albums":
-                            return AlbumsTab(albums: albums);
-
+                            return AlbumsTab(albums: lib.filteredAlbums);
                           case "Folders":
-                            return FoldersTab(folders: folders);
-
+                            return FoldersTab(folders: lib.filteredFolders);
                           default:
                             return const SizedBox.shrink();
                         }

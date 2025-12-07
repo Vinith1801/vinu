@@ -11,7 +11,9 @@ class MiniPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = context.watch<AudioPlayerController>();
     final song = controller.currentSong;
-    if (song == null) return const SizedBox.shrink();
+    if (song == null) {
+      return const SizedBox.shrink();
+    }
 
     final scheme = Theme.of(context).colorScheme;
 

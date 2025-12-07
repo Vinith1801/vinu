@@ -26,16 +26,16 @@ Future<void> main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AudioPlayerController()),
-        ChangeNotifierProvider(create: (_) => ThemeController()),
-        ChangeNotifierProvider(create: (_) => FavoritesController()),
-        ChangeNotifierProvider(create: (_) => PlaylistController()),
-        ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
-        ChangeNotifierProvider(create: (_) => LibraryController()..init()),
-        ChangeNotifierProvider(create: (_) => PlayerSkinController()),
-      ],
-      child: const VinuMusicApp(),
+    providers: [
+      ChangeNotifierProvider(create: (_) => AudioPlayerController()),
+      ChangeNotifierProvider(create: (_) => ThemeController()),
+      ChangeNotifierProvider(create: (_) => FavoritesController()),
+      ChangeNotifierProvider(create: (_) => PlaylistController()),
+      ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
+      ChangeNotifierProvider(create: (_) => LibraryController()..init()),
+      ChangeNotifierProvider(create: (_) => PlayerSkinController()),
+    ],
+    child: const VinuMusicApp(),
     ),
   );
 }

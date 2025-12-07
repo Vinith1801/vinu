@@ -2,8 +2,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:on_audio_query/on_audio_query.dart';
+import 'package:vinu/ui/widgets/artwork_loader.dart';
 import '../../player/audio_player_controller.dart';
-import 'mini_artwork.dart';
 
 class VinylArtwork extends StatefulWidget {
   final int songId;
@@ -35,7 +36,6 @@ class _VinylArtworkState extends State<VinylArtwork> with TickerProviderStateMix
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    // Listen to isPlaying changes via provider
     final isPlaying = context.watch<AudioPlayerController>().isPlaying;
     if (isPlaying) {
       if (!_rotateCtrl.isAnimating) _rotateCtrl.repeat();
@@ -114,15 +114,18 @@ class _VinylArtworkState extends State<VinylArtwork> with TickerProviderStateMix
             ),
           ),
 
-          // Rotating artwork
+          // Rotating artwork (unified loader)
           RotationTransition(
             turns: _rotateCtrl,
             child: ClipOval(
               child: SizedBox(
                 width: artSize,
                 height: artSize,
-                child: MiniArtwork(
-                  songId: widget.songId,
+                child: ArtworkLoader(
+                  id: widget.songId,
+                  type: ArtworkType.AUDIO,
+                  size: artSize,
+                  borderRadius: BorderRadius.circular(artSize / 2),
                   placeholder: Container(
                     width: artSize,
                     height: artSize,
