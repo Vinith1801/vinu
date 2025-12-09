@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vinu/player/library_visibility_controller.dart';
 import '../../theme/theme_controller.dart';
+import 'package:vinu/ui/player/player_styles_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -355,6 +356,19 @@ class _VisibilityCardState extends State<_VisibilityCard> {
                 ]
               ],
             ),
+          ),
+          const Divider(height: 26),
+          
+          _ListRow(
+            icon: Icons.palette_rounded,
+            title: "Player styles",
+            subtitle: "Change now playing UI",
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PlayerStylesScreen()),
+              );
+            },
           ),
         ],
       ),

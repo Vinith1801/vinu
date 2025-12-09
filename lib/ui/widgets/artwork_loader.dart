@@ -1,6 +1,7 @@
 // lib/ui/widgets/artwork_loader.dart
 import 'dart:typed_data';
 import 'dart:io';
+import 'dart:collection';
 
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
@@ -32,8 +33,10 @@ class _ArtworkLoaderState extends State<ArtworkLoader>
   File? _diskFile;
   bool _loading = false;
 
-  // Global memory cache (fastest)
-  static final Map<String, Uint8List> _memoryCache = {};
+  static final LinkedHashMap<String, Uint8List> _memoryCache =
+      LinkedHashMap<String, Uint8List>();
+
+  static const int _maxEntries = 200; // tune this value (100-400) per device expectations
 
   String get _cacheKey => "${widget.type}_${widget.id}";
 
@@ -53,53 +56,93 @@ class _ArtworkLoaderState extends State<ArtworkLoader>
     }
   }
 
+  // -------------------------
+  // LRU helpers
+  // -------------------------
+  static Uint8List? _cacheGet(String key) {
+    final v = _memoryCache.remove(key);
+    if (v == null) return null;
+    // Re-insert to mark as most-recently-used
+    _memoryCache[key] = v;
+    return v;
+  }
+
+  static void _cacheSet(String key, Uint8List data) {
+    // If exists, remove so we can re-insert (new MRU)
+    if (_memoryCache.containsKey(key)) {
+      _memoryCache.remove(key);
+    }
+    _memoryCache[key] = data;
+
+    // Evict oldest entries if limit reached
+    while (_memoryCache.length > _maxEntries) {
+      _memoryCache.remove(_memoryCache.keys.first);
+    }
+  }
+
   Future<void> _loadArtwork() async {
-    // 1. MEMORY CACHE CHECK
-    if (_memoryCache.containsKey(_cacheKey)) {
-      _memoryBytes = _memoryCache[_cacheKey];
+    // 1. MEMORY CACHE CHECK (fast, synchronous read from RAM)
+    final mem = _cacheGet(_cacheKey);
+    if (mem != null) {
+      _memoryBytes = mem;
       if (mounted) setState(() {});
       return;
     }
 
-    // 2. DISK CACHE CHECK
-    final dir = await getTemporaryDirectory();
-    final file = File("${dir.path}/art_${_cacheKey}.png");
-
-    if (file.existsSync()) {
-      final bytes = await file.readAsBytes();
-      if (bytes.isNotEmpty) {
-        _diskFile = file;
-        _memoryCache[_cacheKey] = bytes;
-        _memoryBytes = bytes;
-        if (mounted) setState(() {});
-        return;
+    // 2. DISK CACHE CHECK (async non-blocking)
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File("${dir.path}/art_${_cacheKey}.png");
+      final exists = await file.exists();
+      if (exists) {
+        final bytes = await file.readAsBytes();
+        if (bytes.isNotEmpty) {
+          _diskFile = file;
+          _cacheSet(_cacheKey, bytes);
+          _memoryBytes = bytes;
+          if (mounted) setState(() {});
+          return;
+        }
       }
+    } catch (_) {
+      // ignore disk errors -- will fallback to queryArtwork
     }
 
-    // 3. LOAD FROM DEVICE (slowest)
+    // 3. LOAD FROM DEVICE (slowest) -- guard concurrent calls
     if (_loading) return;
     _loading = true;
 
-    final bytes = await OnAudioQuery().queryArtwork(
-      widget.id,
-      widget.type,
-      format: ArtworkFormat.PNG,
-      size: 1200,
-    );
+    try {
+      final bytes = await OnAudioQuery().queryArtwork(
+        widget.id,
+        widget.type,
+        format: ArtworkFormat.PNG,
+        size: 1200,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (bytes != null && bytes.isNotEmpty) {
-      _memoryCache[_cacheKey] = bytes;
-      _memoryBytes = bytes;
+      if (bytes != null && bytes.isNotEmpty) {
+        // Update caches
+        _cacheSet(_cacheKey, bytes);
+        _memoryBytes = bytes;
 
-      // Save to disk cache
-      await file.writeAsBytes(bytes, flush: true);
-      _diskFile = file;
+        // Save to disk cache (best-effort)
+        try {
+          final dir = await getTemporaryDirectory();
+          final file = File("${dir.path}/art_${_cacheKey}.png");
+          await file.writeAsBytes(bytes, flush: true);
+          _diskFile = file;
+        } catch (_) {
+          // ignore disk write failures
+        }
+      }
+    } catch (_) {
+      // ignore
+    } finally {
+      _loading = false;
+      if (mounted) setState(() {});
     }
-
-    _loading = false;
-    if (mounted) setState(() {});
   }
 
   @override
@@ -116,6 +159,7 @@ class _ArtworkLoaderState extends State<ArtworkLoader>
         height: widget.size,
       );
     } else if (_diskFile != null && _diskFile!.existsSync()) {
+      // small-risk synchronous check here, but diskFile was established earlier via async read
       child = Image.file(
         _diskFile!,
         fit: BoxFit.cover,
@@ -128,13 +172,16 @@ class _ArtworkLoaderState extends State<ArtworkLoader>
             width: widget.size,
             height: widget.size,
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Icon(Icons.music_note, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            child: Icon(Icons.music_note,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           );
     }
 
     return ClipRRect(
       borderRadius: widget.borderRadius,
-      child: RepaintBoundary(child: SizedBox(width: widget.size, height: widget.size, child: child)),
+      child: RepaintBoundary(
+        child: SizedBox(width: widget.size, height: widget.size, child: child),
+      ),
     );
   }
 

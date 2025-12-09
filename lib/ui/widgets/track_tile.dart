@@ -162,9 +162,6 @@ class _PopupMenu extends StatelessWidget {
               );
             }
             break;
-          case 'share':
-            // implement share if you add share_plus
-            break;
           case 'delete':
             // optional: delete file (requires permission & caution)
             break;
@@ -184,10 +181,6 @@ class _PopupMenu extends StatelessWidget {
             value: 'removePlaylist',
             child: Text('Remove from this Playlist'),
           ),
-        const PopupMenuItem(
-          value: 'share',
-          child: Text('Share'),
-        ),
         const PopupMenuItem(
           value: 'delete',
           child: Text('Delete'),

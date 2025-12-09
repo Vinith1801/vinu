@@ -1,4 +1,4 @@
-// lib/ui/player/skins/skin_minimal.dart
+// lib/ui/player/skins/skin_neon_glow.dart
 import 'package:flutter/material.dart';
 import 'package:vinu/ui/player/skins/player_skin_base.dart';
 import '../../../player/audio_player_controller.dart';
@@ -7,70 +7,65 @@ import '../mini_artwork.dart';
 import '../player_controls.dart';
 import '../player_actions_bar.dart';
 
-class SkinMinimal extends PlayerSkin {
-  const SkinMinimal({
+// Accent glow skin: tasteful, very subtle glow behind artwork
+class SkinNeonGlow extends PlayerSkin {
+  const SkinNeonGlow({
     super.key,
     required super.controller,
     required super.onClose,
     required super.openQueue,
   });
 
+  Color _accent(ColorScheme s) {
+    // choose an accent that contrasts bpased on brightness
+    return s.primary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final song = controller.currentSong!;
     final scheme = Theme.of(context).colorScheme;
+    final accent = _accent(scheme);
 
     return SafeArea(
       child: Column(
         children: [
-          // Top Bar
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
             child: Row(
               children: [
-                IconButton(
-                  icon: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.onSurface),
-                  onPressed: onClose,
-                ),
+                IconButton(icon: Icon(Icons.keyboard_arrow_down_rounded, color: scheme.onSurface), onPressed: onClose),
                 const Spacer(),
-                IconButton(
-                  icon: Icon(Icons.queue_music_rounded, color: scheme.onSurfaceVariant),
-                  onPressed: openQueue,
-                ),
+                IconButton(icon: Icon(Icons.queue_music_rounded, color: scheme.onSurfaceVariant), onPressed: openQueue),
               ],
             ),
           ),
 
-          // Artwork + meta
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: SizedBox(
-                    width: 280,
-                    height: 280,
-                    child: MiniArtwork(songId: song.id),
+                // soft glow
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: accent.withValues( alpha:0.12), blurRadius: 44, spreadRadius: 8),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: SizedBox(width: 260, height: 260, child: MiniArtwork(songId: song.id)),
                   ),
                 ),
 
-                const SizedBox(height: 18),
-
-                Text(
-                  song.title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface),
-                ),
+                const SizedBox(height: 16),
+                Text(song.title, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: scheme.onSurface)),
                 const SizedBox(height: 6),
-                Text(
-                  song.artist ?? 'Unknown',
-                  style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
-                ),
-
+                Text(song.artist ?? 'Unknown', style: TextStyle(color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 18),
 
-                // Seekbar (listens only to position)
                 StreamBuilder<PositionData>(
                   stream: controller.smoothPositionStream,
                   builder: (_, snap) {
@@ -83,9 +78,9 @@ class SkinMinimal extends PlayerSkin {
                   },
                 ),
 
-                const SizedBox(height: 8),
-                PlayerControls(controller: controller, openQueue: openQueue),
                 const SizedBox(height: 10),
+                PlayerControls(controller: controller, openQueue: openQueue),
+                const SizedBox(height: 8),
                 PlayerActionsBar(songId: song.id),
                 const SizedBox(height: 16),
               ],
