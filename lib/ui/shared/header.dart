@@ -1,7 +1,7 @@
 //lib/ui/widgets/header.dart
 import 'package:flutter/material.dart';
-import '../screens/search_screen.dart';
-import '../screens/settings_screen.dart';
+import '../library/search_screen.dart';
+import '../settings/settings_screen.dart';
 
 class Header extends StatelessWidget {
   const Header({super.key});

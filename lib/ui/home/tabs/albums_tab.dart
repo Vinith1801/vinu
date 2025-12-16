@@ -1,8 +1,8 @@
 // lib/ui/screens/home/tabs/albums_tab.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../../album_songs_screen.dart';
-import 'package:vinu/ui/widgets/artwork_loader.dart';
+import '../../library/album_songs_screen.dart';
+import 'package:vinu/ui/shared/artwork_loader.dart';
 
 class AlbumsTab extends StatelessWidget {
   final List<AlbumModel> albums;

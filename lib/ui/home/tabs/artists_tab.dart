@@ -1,8 +1,8 @@
 // lib/ui/screens/home/tabs/artists_tab.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import '../../artist_songs_screen.dart';
-import 'package:vinu/ui/widgets/artwork_loader.dart';
+import '../../library/artist_songs_screen.dart';
+import 'package:vinu/ui/shared/artwork_loader.dart';
 
 class ArtistsTab extends StatelessWidget {
   final List<ArtistModel> artists;

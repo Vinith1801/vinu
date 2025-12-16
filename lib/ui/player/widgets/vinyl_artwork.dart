@@ -3,8 +3,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
-import 'package:vinu/ui/widgets/artwork_loader.dart';
-import '../../player/audio_player_controller.dart';
+import 'package:vinu/ui/shared/artwork_loader.dart';
+import '../../../player/audio_player_controller.dart';
 
 class VinylArtwork extends StatefulWidget {
   final int songId;

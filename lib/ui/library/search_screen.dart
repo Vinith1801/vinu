@@ -1,10 +1,11 @@
-// lib/ui/screens/search_screen.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
+import 'package:vinu/player/favorites_controller.dart';
+import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
 import '../../player/library_controller.dart';
 import '../../player/audio_player_controller.dart';
-import '../widgets/track_tile.dart';
+import '../shared/track_tile.dart';
 import 'album_songs_screen.dart';
 import 'artist_songs_screen.dart';
 import 'folder_songs_screen.dart';
@@ -24,6 +25,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     final lib = context.watch<LibraryController>();
     final audio = context.read<AudioPlayerController>();
+    final fav = context.watch<FavoritesController>();
     final scheme = Theme.of(context).colorScheme;
 
     // Normalize query
@@ -96,13 +98,17 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (filteredSongs.isNotEmpty) ...[
                   _header("Songs", scheme),
                   ...filteredSongs.map((s) => TrackTile(
-                        title: s.title,
-                        artist: s.artist ?? "Unknown Artist",
-                        songId: s.id,
-                        onTap: () {
-                          audio.setPlaylist(filteredSongs, initialIndex: filteredSongs.indexOf(s));
-                        },
-                      )),
+                    title: s.title,
+                    artist: s.artist ?? "Unknown Artist",
+                    songId: s.id,
+                    isFavorite: fav.isFavorite(s.id),
+                    onTap: () => audio.setPlaylist(
+                      filteredSongs,
+                      initialIndex: filteredSongs.indexOf(s),
+                    ),
+                    onToggleFavorite: () => fav.toggleFavorite(s.id),
+                    onAddToPlaylist: () => AddToPlaylistSheet.show(context, s.id),
+                  )),
                   const SizedBox(height: 22),
                 ],
 

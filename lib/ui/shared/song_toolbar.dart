@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:on_audio_query/on_audio_query.dart';
-
-enum SongSortMode { title, artist, duration, date }
+import 'song_sort_mode.dart';
 
 class SongToolbar extends StatelessWidget {
-  final List<SongModel> songs;
   final VoidCallback onShuffle;
   final ValueChanged<SongSortMode> onSort;
-
   final SongSortMode activeSort;
 
   const SongToolbar({
     super.key,
-    required this.songs,
     required this.onShuffle,
     required this.onSort,
     required this.activeSort,
@@ -26,8 +21,14 @@ class SongToolbar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       child: Row(
         children: [
-          // SHUFFLE BUTTON
+          // SHUFFLE
           ElevatedButton.icon(
+            onPressed: onShuffle,
+            icon: const Icon(Icons.shuffle_rounded, size: 22),
+            label: const Text(
+              "Shuffle",
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
             style: ElevatedButton.styleFrom(
               elevation: 0,
               backgroundColor: scheme.primary,
@@ -37,26 +38,20 @@ class SongToolbar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
-            onPressed: onShuffle,
-            icon: const Icon(Icons.shuffle_rounded, size: 22),
-            label: const Text(
-              "Shuffle",
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
           ),
 
           const Spacer(),
 
-          // SORT MENU
+          // SORT
           PopupMenuButton<SongSortMode>(
             tooltip: "Sort",
             icon: Icon(Icons.sort_rounded, color: scheme.onSurface),
             onSelected: onSort,
             itemBuilder: (_) => [
-              _sortItem(SongSortMode.title, "Title"),
-              _sortItem(SongSortMode.artist, "Artist"),
-              _sortItem(SongSortMode.duration, "Duration"),
-              _sortItem(SongSortMode.date, "Recently Added"),
+              _sortItem(context, SongSortMode.title, "Title"),
+              _sortItem(context, SongSortMode.artist, "Artist"),
+              _sortItem(context, SongSortMode.duration, "Duration"),
+              _sortItem(context, SongSortMode.date, "Recently Added"),
             ],
           ),
         ],
@@ -64,10 +59,34 @@ class SongToolbar extends StatelessWidget {
     );
   }
 
-  PopupMenuItem<SongSortMode> _sortItem(SongSortMode mode, String label) {
-    return PopupMenuItem(
+  PopupMenuItem<SongSortMode> _sortItem(
+    BuildContext context,
+    SongSortMode mode,
+    String label,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    final isActive = mode == activeSort;
+
+    return PopupMenuItem<SongSortMode>(
       value: mode,
-      child: Text(label),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+              ),
+            ),
+          ),
+          if (isActive)
+            Icon(
+              Icons.check,
+              size: 18,
+              color: scheme.primary,
+            ),
+        ],
+      ),
     );
   }
 }

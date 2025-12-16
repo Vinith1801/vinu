@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../player/library_visibility_controller.dart';
 import '../../player/library_controller.dart';
-import '../widgets/header.dart';
+import '../shared/header.dart';
 
 // tabs
-import 'home/tabs/songs_tab.dart';
-import 'home/tabs/favorites_tab.dart';
-import 'home/tabs/playlists_tab.dart';
-import 'home/tabs/artists_tab.dart';
-import 'home/tabs/albums_tab.dart';
-import 'home/tabs/folders_tab.dart';
+import 'tabs/songs_tab.dart';
+import 'tabs/favorites_tab.dart';
+import 'tabs/playlists_tab.dart';
+import 'tabs/artists_tab.dart';
+import 'tabs/albums_tab.dart';
+import 'tabs/folders_tab.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

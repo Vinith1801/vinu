@@ -5,7 +5,7 @@ import 'artwork_loader.dart';
 class MediaTile extends StatelessWidget {
   final Widget? artwork;
   final int? artworkId;
-  final dynamic artworkType; // ArtworkType enum from on_audio_query (kept dynamic to avoid import collisions)
+  final dynamic artworkType;
   final String title;
   final String? subtitle;
   final VoidCallback? onTap;

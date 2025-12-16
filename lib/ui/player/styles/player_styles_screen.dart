@@ -1,9 +1,9 @@
 // lib/ui/player/player_styles_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/ui/player/skin_preview.dart';
+import 'package:vinu/ui/player/styles/skin_preview.dart';
 import 'package:vinu/ui/player/player_skin_controller.dart';
-import 'package:vinu/ui/player/mini_artwork.dart';
+import 'package:vinu/ui/player/widgets/mini_artwork.dart';
 
 /// Player styles screen with lightweight mini-previews for each skin.
 /// Ensure the indices here match the order you supply in FullPlayer's `skins` list.

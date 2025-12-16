@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../player/audio_player_controller.dart';
-import 'mini_artwork.dart';
+import 'widgets/mini_artwork.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});

@@ -9,9 +9,9 @@ import 'package:vinu/ui/player/skins/skin_minimal_pro.dart';
 import 'package:vinu/ui/player/skins/skin_neon_glow.dart';
 import 'package:vinu/ui/player/skins/skin_retro_tape.dart';
 import 'package:vinu/ui/player/skins/skin_vinyl_ultra.dart';
+import 'package:vinu/ui/player/widgets/queue_bottom_sheet.dart';
 
 import '../../player/audio_player_controller.dart';
-import 'mini_artwork.dart';
 
 class FullPlayer extends StatefulWidget {
   final VoidCallback onClose;
@@ -27,91 +27,7 @@ class _FullPlayerState extends State<FullPlayer> {
   // -----------------------------
   // QUEUE BOTTOM SHEET
   // -----------------------------
-  void _openQueue() {
-    final controller = context.read<AudioPlayerController>();
-    final queue = controller.playlist;
-    final scheme = Theme.of(context).colorScheme;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.75,
-          decoration: BoxDecoration(
-            color: scheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 14),
-              Container(
-                height: 5,
-                width: 50,
-                decoration: BoxDecoration(
-                  color: scheme.outline.withValues( alpha:0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                "Up Next",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: queue.length,
-                  itemBuilder: (_, i) {
-                    final song = queue[i];
-                    final isCurrent =
-                        controller.currentIndex == i;
-
-                    return ListTile(
-                      tileColor: isCurrent
-                          ? scheme.primary.withValues( alpha:0.5)
-                          : null,
-                      leading: SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: MiniArtwork(songId: song.id),
-                      ),
-                      title: Text(
-                        song.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: scheme.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      subtitle: Text(
-                        song.artist ?? "Unknown Artist",
-                        style: TextStyle(color: scheme.onSurfaceVariant),
-                      ),
-                      trailing: isCurrent
-                          ? Icon(Icons.play_arrow,
-                              color: scheme.primary)
-                          : null,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        controller.playIndex(i);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
+  void _openQueue() => QueueBottomSheet.show(context);
 
   @override
 Widget build(BuildContext context) {

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:vinu/ui/player/player_actions_bar.dart';
 
 import '../../../player/audio_player_controller.dart';
-import '../../widgets/seekbar.dart';
+import '../widgets/seekbar.dart';
 import '../player_controls.dart';
-import '../vinyl_artwork.dart';
+import '../widgets/vinyl_artwork.dart';
 import 'player_skin_base.dart';
-import '../volume_slider.dart';
+import '../widgets/volume_slider.dart';
 
 class SkinClassic extends PlayerSkin {
   const SkinClassic({

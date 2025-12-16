@@ -1,10 +1,11 @@
-// lib/ui/screens/folder_songs_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:vinu/player/favorites_controller.dart';
+import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
 
 import '../../player/library_controller.dart';
 import '../../player/audio_player_controller.dart';
-import '../widgets/track_tile.dart';
+import '../shared/track_tile.dart';
 
 class FolderSongsScreen extends StatelessWidget {
   final String folderPath;
@@ -17,6 +18,7 @@ class FolderSongsScreen extends StatelessWidget {
 
     final lib = context.watch<LibraryController>();
     final controller = context.read<AudioPlayerController>();
+    final fav = context.watch<FavoritesController>();
 
     // Direct pull from centralized library
     final folderSongs = lib.getSongsByFolder(folderPath);
@@ -87,9 +89,10 @@ class FolderSongsScreen extends StatelessWidget {
                         title: s.title,
                         artist: s.artist ?? "Unknown Artist",
                         songId: s.id,
-                        onTap: () {
-                          controller.setPlaylist(folderSongs, initialIndex: i);
-                        },
+                        isFavorite: fav.isFavorite(s.id),
+                        onTap: () => controller.setPlaylist(folderSongs, initialIndex: i),
+                        onToggleFavorite: () => fav.toggleFavorite(s.id),
+                        onAddToPlaylist: () => AddToPlaylistSheet.show(context, s.id),
                       );
                     },
                   ),

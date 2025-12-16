@@ -1,12 +1,14 @@
-// lib/ui/screens/home/tabs/favorites_tab.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
+import 'package:vinu/ui/shared/song_sort_mode.dart';
+import 'package:vinu/ui/shared/song_sorter.dart';
 
-import '../../../../player/audio_player_controller.dart';
-import '../../../../player/favorites_controller.dart';
-import '../../../widgets/track_tile.dart';
-import '../../../widgets/song_toolbar.dart';
+import '../../../player/audio_player_controller.dart';
+import '../../../player/favorites_controller.dart';
+import '../../shared/track_tile.dart';
+import '../../shared/song_toolbar.dart';
 
 class FavoritesTab extends StatefulWidget {
   final List<SongModel> songs;
@@ -34,13 +36,11 @@ class _FavoritesTabState extends State<FavoritesTab> {
     }
 
     // Copy + sort
-    final List<SongModel> list = List<SongModel>.from(favSongs);
-    _applySort(list);
+    final list = SongSorter.sort(widget.songs, sortMode);
 
     return Column(
       children: [
         SongToolbar(
-          songs: list,
           activeSort: sortMode,
           onShuffle: () {
             final shuffled = List<SongModel>.from(list)..shuffle();
@@ -60,34 +60,18 @@ class _FavoritesTabState extends State<FavoritesTab> {
               final s = list[i];
 
               return TrackTile(
-                key: ValueKey(s.id),
                 title: s.title,
                 artist: s.artist ?? "Unknown",
                 songId: s.id,
+                isFavorite: fav.isFavorite(s.id),
                 onTap: () => controller.setPlaylist(list, initialIndex: i),
+                onToggleFavorite: () => fav.toggleFavorite(s.id),
+                onAddToPlaylist: () => AddToPlaylistSheet.show(context, s.id),
               );
             },
           ),
         ),
       ],
     );
-  }
-
-  void _applySort(List<SongModel> list) {
-    switch (sortMode) {
-      case SongSortMode.title:
-        list.sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-        break;
-      case SongSortMode.artist:
-        list.sort((a, b) =>
-            (a.artist ?? '').toLowerCase().compareTo((b.artist ?? '').toLowerCase()));
-        break;
-      case SongSortMode.duration:
-        list.sort((a, b) => (a.duration ?? 0).compareTo(b.duration ?? 0));
-        break;
-      case SongSortMode.date:
-        list.sort((a, b) => (b.dateAdded ?? 0).compareTo(a.dateAdded ?? 0));
-        break;
-    }
   }
 }

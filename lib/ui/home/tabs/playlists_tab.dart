@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vinu/models/vinu_playlist.dart';
 import 'package:vinu/player/playlist_controller.dart';
+import '../../playlist/playlist_dialogs.dart';
 
-import '../../playlist_songs_screen.dart';
+import '../../playlist/playlist_songs_screen.dart';
 
 class PlaylistsTab extends StatelessWidget {
   const PlaylistsTab({super.key});
@@ -31,7 +32,7 @@ class PlaylistsTab extends StatelessWidget {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
-            onPressed: () => _showCreateDialog(context),
+            onPressed: () => PlaylistDialogs.showCreate(context),
           ),
         ),
         const SizedBox(height: 12),
@@ -93,36 +94,6 @@ class PlaylistsTab extends StatelessWidget {
                 ),
         ),
       ],
-    );
-  }
-
-  void _showCreateDialog(BuildContext ctx) {
-    final tc = TextEditingController();
-    showDialog(
-      context: ctx,
-      builder: (_) {
-        return AlertDialog(
-          title: const Text("New Playlist"),
-          content: TextField(
-            controller: tc,
-            autofocus: true,
-            decoration: const InputDecoration(hintText: "Playlist name"),
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-            TextButton(
-              onPressed: () {
-                final name = tc.text.trim();
-                if (name.isNotEmpty) {
-                  ctx.read<PlaylistController>().createPlaylist(name);
-                  Navigator.pop(ctx);
-                }
-              },
-              child: const Text("Create"),
-            ),
-          ],
-        );
-      },
     );
   }
 

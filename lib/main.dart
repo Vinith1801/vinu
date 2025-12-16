@@ -11,7 +11,7 @@ import 'player/playlist_controller.dart';
 import 'player/library_controller.dart';
 import 'theme/theme_controller.dart';
 
-import 'ui/screens/home_screen.dart';
+import 'ui/home/home_screen.dart';
 import 'ui/player/player_container.dart';
 
 Future<void> main() async {

@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:vinu/ui/player/skins/player_skin_base.dart';
 import '../../../player/audio_player_controller.dart';
-import '../vinyl_artwork.dart';
-import '../../widgets/seekbar.dart';
+import '../widgets/vinyl_artwork.dart';
+import '../widgets/seekbar.dart';
 import '../player_controls.dart';
 import '../player_actions_bar.dart';
 
