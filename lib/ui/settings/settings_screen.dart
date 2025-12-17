@@ -1,9 +1,10 @@
 //lib/ui/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vinu/player/library_visibility_controller.dart';
-import '../../theme/theme_controller.dart';
+import 'package:vinu/ui/player/library_view_controller.dart';
+import 'package:vinu/ui/shared/color_picker_dialog.dart';
+import '../theme/theme_controller.dart';
 import 'package:vinu/ui/player/styles/player_styles_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -14,28 +15,26 @@ class SettingsScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: scheme.surface,
       appBar: AppBar(
-        elevation: 0,
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
-        title: Text(
+        elevation: 0,
+        title: const Text(
           'Settings',
-          style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface),
+          style: TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
-      backgroundColor: scheme.surface,
       body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        padding: const EdgeInsets.all(16),
         children: const [
-          SizedBox(height: 6),
           _AppearanceCard(),
-          SizedBox(height: 12),
+          SizedBox(height: 16),
           _VisibilityCard(),
-          SizedBox(height: 12),
+          SizedBox(height: 16),
           _LibraryCard(),
-          SizedBox(height: 12),
+          SizedBox(height: 16),
           _AboutCard(),
-          SizedBox(height: 28),
         ],
       ),
     );
@@ -45,113 +44,216 @@ class SettingsScreen extends StatelessWidget {
 ////////////////////////////////////////////////////////////////////////////
 /// APPEARANCE CARD
 ////////////////////////////////////////////////////////////////////////////
-class _AppearanceCard extends StatefulWidget {
+class _AppearanceCard extends StatelessWidget {
   const _AppearanceCard();
-
-  @override
-  State<_AppearanceCard> createState() => _AppearanceCardState();
-}
-
-class _AppearanceCardState extends State<_AppearanceCard> {
-  String _mode = 'system';
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final theme = context.read<ThemeController>();
-    _mode = theme.isDark ? 'dark' : 'light';
-  }
-
-  void _applyMode(String mode) {
-    final theme = context.read<ThemeController>();
-    setState(() => _mode = mode);
-
-    if (mode == 'system') {
-      if (theme.isDark) theme.toggleDarkMode();
-    } else if (mode == 'dark') {
-      if (!theme.isDark) theme.toggleDarkMode();
-    } else {
-      if (theme.isDark) theme.toggleDarkMode();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final theme = context.watch<ThemeController>();
     final scheme = Theme.of(context).colorScheme;
 
-    return _CardContainer(
-      title: 'Appearance',
-      subtitle: 'Theme, accent and look & feel',
+    return _Card(
+      title: 'APPEARANCE',
+      subtitle: 'Theme mode and accent color',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Theme mode', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          const _SectionTitle('Theme mode'),
           const SizedBox(height: 8),
+
           Row(
             children: [
-              _RadioButton(label: 'System', selected: _mode == 'system', onTap: () => _applyMode('system')),
+              _Radio(
+                label: 'System',
+                selected: theme.themeMode == ThemeMode.system,
+                onTap: () => theme.setThemeMode(ThemeMode.system),
+              ),
               const SizedBox(width: 12),
-              _RadioButton(label: 'Light', selected: _mode == 'light', onTap: () => _applyMode('light')),
+              _Radio(
+                label: 'Light',
+                selected: theme.themeMode == ThemeMode.light,
+                onTap: () => theme.setThemeMode(ThemeMode.light),
+              ),
               const SizedBox(width: 12),
-              _RadioButton(label: 'Dark', selected: _mode == 'dark', onTap: () => _applyMode('dark')),
+              _Radio(
+                label: 'Dark',
+                selected: theme.themeMode == ThemeMode.dark,
+                onTap: () => theme.setThemeMode(ThemeMode.dark),
+              ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text('Accent palettes', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 92,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: theme.colorSets.length,
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) {
-                final set = theme.colorSets[i];
-                final selected = theme.selectedIndex == i;
 
-                return GestureDetector(
-                  onTap: () => theme.setColorSet(i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: 86,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      color: scheme.surface,
-                      border: Border.all(
-                        width: selected ? 3 : 1,
-                        color: selected ? set.primary : scheme.outline.withValues(alpha: 0.06),
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: (theme.isDark ? set.gradientDark : set.gradientLight)
-                                ?? LinearGradient(colors: [set.primary, set.secondary]),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Palette ${i + 1}', style: TextStyle(fontSize: 12, color: scheme.onSurface)),
-                      ],
+          const SizedBox(height: 20),
+          const _SectionTitle('Accent color'),
+          const SizedBox(height: 10),
+
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (_) => ColorPickerDialog(
+                  initialColor: theme.seedColor,
+                  onSelected: theme.setSeedColor,
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                color: scheme.surfaceContainerHighest,
+              ),
+              child: Row(
+                children: [
+                  _ColorDot(color: theme.seedColor),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Tap to choose custom accent color',
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
-                );
-              },
+                  const Icon(Icons.chevron_right_rounded),
+                ],
+              ),
             ),
           ),
+
         ],
       ),
     );
   }
 }
 
+class _Card extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  const _Card({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: scheme.outline.withValues(alpha: 0.06)),
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 6,
+            offset: Offset(0, 3),
+            color: Color(0x11000000),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0.8,
+                color: scheme.primary,
+              )),
+          const SizedBox(height: 4),
+          Text(subtitle,
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+          const SizedBox(height: 16),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String text;
+  const _SectionTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(fontWeight: FontWeight.w700),
+    );
+  }
+}
+
+class _Radio extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _Radio({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? scheme.primary : scheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? scheme.primary : scheme.outline.withValues(alpha: 0.06),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: selected ? scheme.onPrimary : scheme.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ColorDot extends StatelessWidget {
+  final Color color;
+  const _ColorDot({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Accent color',
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color,
+          boxShadow: const [
+            BoxShadow(
+              blurRadius: 6,
+              offset: Offset(0, 3),
+              color: Color(0x33000000),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 ////////////////////////////////////////////////////////////////////////////
 /// VISIBILITY CARD (tabs + per-folder scanning toggles)
 ////////////////////////////////////////////////////////////////////////////
@@ -380,50 +482,67 @@ class _VisibilityCardState extends State<_VisibilityCard> {
 ////////////////////////////////////////////////////////////////////////////
 /// LIBRARY CARD
 ////////////////////////////////////////////////////////////////////////////
-class _LibraryCard extends StatefulWidget {
+class _LibraryCard extends StatelessWidget {
   const _LibraryCard();
-
-  @override
-  State<_LibraryCard> createState() => _LibraryCardState();
-}
-
-class _LibraryCardState extends State<_LibraryCard> {
-  static const _kKeyDefaultView = 'settings.library.defaultView';
-  String _defaultView = 'list';
-
-  @override
-  void initState() {
-    super.initState();
-    SharedPreferences.getInstance().then((p) {
-      _defaultView = p.getString(_kKeyDefaultView) ?? 'list';
-      setState(() {});
-    });
-  }
-
-  void _setDefault(String v) async {
-    final p = await SharedPreferences.getInstance();
-    await p.setString(_kKeyDefaultView, v);
-    setState(() => _defaultView = v);
-  }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final view = context.watch<LibraryViewController>();
+
     return _CardContainer(
       title: 'Library',
-      subtitle: 'Default view & sorting',
+      subtitle: 'Default layout and density',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Default view', style: TextStyle(fontWeight: FontWeight.w700, color: scheme.onSurface)),
+          const _SectionTitle('View mode'),
           const SizedBox(height: 8),
+
           Row(
             children: [
-              _RadioButton(label: 'List', selected: _defaultView == 'list', onTap: () => _setDefault('list')),
+              _RadioButton(
+                label: 'List',
+                selected: view.viewMode == LibraryViewMode.list,
+                onTap: () => view.setViewMode(LibraryViewMode.list),
+              ),
               const SizedBox(width: 12),
-              _RadioButton(label: 'Grid', selected: _defaultView == 'grid', onTap: () => _setDefault('grid')),
+              _RadioButton(
+                label: 'Grid',
+                selected: view.viewMode == LibraryViewMode.grid,
+                onTap: () => view.setViewMode(LibraryViewMode.grid),
+              ),
             ],
           ),
+
+          if (view.viewMode == LibraryViewMode.grid) ...[
+            const SizedBox(height: 20),
+            const _SectionTitle('Grid density'),
+            const SizedBox(height: 6),
+
+            Row(
+              children: [
+                const Icon(Icons.grid_on, size: 18),
+                Expanded(
+                  child: Slider(
+                    min: 2,
+                    max: 4,
+                    divisions: 2,
+                    value: view.gridCount.toDouble(),
+                    onChanged: (v) =>
+                        view.setGridCount(v.toInt()),
+                  ),
+                ),
+                Text(
+                  '${view.gridCount}',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: scheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
