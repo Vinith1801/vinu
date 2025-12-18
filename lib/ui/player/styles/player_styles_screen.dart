@@ -15,14 +15,22 @@ class PlayerStylesScreen extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     // Keep entries in same order as FullPlayer.skins list
-    final _skinEntries = <_SkinEntry>[
-      _SkinEntry(index: 0, name: 'Classic', builder: (ctx) => _previewClassic(ctx)),
-      _SkinEntry(index: 1, name: 'Minimal', builder: (ctx) => _previewMinimal(ctx)),
-      _SkinEntry(index: 2, name: 'Minimal Pro', builder: (ctx) => _previewMinimalPro(ctx)),
-      _SkinEntry(index: 3, name: 'Neon Glow', builder: (ctx) => _previewNeon(ctx)),
-      _SkinEntry(index: 4, name: 'Retro Tape', builder: (ctx) => _previewRetro(ctx)),
-      _SkinEntry(index: 5, name: 'Glassy', builder: (ctx) => _previewGlassy(ctx)),
-      _SkinEntry(index: 6, name: 'Vinyl Ultra', builder: (ctx) => _previewVinyl(ctx)),
+    final _skinEntries = [
+      _SkinEntry(
+        skin: PlayerSkinType.classic,
+        name: 'Classic',
+        builder: _previewClassic,
+      ),
+      _SkinEntry(
+        skin: PlayerSkinType.minimal,
+        name: 'Minimal',
+        builder: _previewMinimal,
+      ),
+      _SkinEntry(
+        skin: PlayerSkinType.circular,
+        name: 'Circular',
+        builder: _previewCircular,
+      ),
     ];
 
     return Scaffold(
@@ -48,14 +56,14 @@ class PlayerStylesScreen extends StatelessWidget {
           itemBuilder: (ctx, i) {
             final entry = _skinEntries[i];
             final skinCtrl = ctx.watch<PlayerSkinController>();
-            final selected = skinCtrl.selectedSkin == entry.index;
+            final selected = skinCtrl.selectedSkin == entry.skin;
 
             return SkinPreview(
               name: entry.name,
               preview: entry.builder(ctx),
               selected: selected,
               onTap: () {
-                ctx.read<PlayerSkinController>().setSkin(entry.index);
+                ctx.read<PlayerSkinController>().setSkin(entry.skin);
                 // short feedback
                 ScaffoldMessenger.of(ctx).removeCurrentSnackBar();
                 ScaffoldMessenger.of(ctx).showSnackBar(
@@ -123,147 +131,52 @@ class PlayerStylesScreen extends StatelessWidget {
       ),
     );
   }
-
-  // Minimal Pro preview: artwork left + small seek + controls
-  static Widget _previewMinimalPro(BuildContext ctx) {
+  static Widget _previewCircular(BuildContext ctx) {
     final scheme = Theme.of(ctx).colorScheme;
+
     return Container(
       color: scheme.surface,
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: SizedBox(width: 72, height: 72, child: MiniArtwork(songId: 0, placeholder: _placeholderIcon(scheme))),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              children: [
-                _fakeTitleBand(scheme, small: true),
-                const SizedBox(height: 8),
-                _fakeTinySeek(scheme),
-                const SizedBox(height: 8),
-                Align(alignment: Alignment.centerRight, child: _miniPlayIcon(scheme)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Neon preview: colorful background with glowing circle + controls
-  static Widget _previewNeon(BuildContext ctx) {
-    final scheme = Theme.of(ctx).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [scheme.primary.withValues( alpha:0.12), scheme.secondary.withValues( alpha:0.04)]),
-      ),
+      padding: const EdgeInsets.all(12),
       child: Column(
         children: [
           Expanded(
             child: Center(
-              child: Container(
-                width: double.infinity,
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  gradient: RadialGradient(colors: [scheme.primary.withValues( alpha:0.15), Colors.transparent]),
-                ),
-                child: const Center(child: Icon(Icons.music_note, size: 44)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          _miniControlsRow(scheme, small: true),
-        ],
-      ),
-    );
-  }
-
-  // Retro tape preview: textured rectangle + faux reels
-  static Widget _previewRetro(BuildContext ctx) {
-    final scheme = Theme.of(ctx).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(8),
-      color: scheme.surface,
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 4),
-              decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest.withValues( alpha:0.06),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  _tinyReel(scheme),
-                  _tinyReel(scheme),
+                  // Circular seek bar (fake progress)
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: CircularProgressIndicator(
+                      value: 0.65, // preview-only fake progress
+                      strokeWidth: 6,
+                      backgroundColor:
+                          scheme.onSurfaceVariant.withValues(alpha: 0.15),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(scheme.primary),
+                    ),
+                  ),
+
+                  // Artwork
+                  ClipOval(
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      color: scheme.surfaceContainerHighest
+                          .withValues(alpha: 0.06),
+                      child: const Icon(
+                        Icons.music_note,
+                        size: 42,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 8),
-          _miniControlsRow(scheme, small: true),
-        ],
-      ),
-    );
-  }
-
-  // Glassy preview: frosted band + artwork
-  static Widget _previewGlassy(BuildContext ctx) {
-    final scheme = Theme.of(ctx).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: scheme.surface,
-      ),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: scheme.surfaceContainerHighest.withValues( alpha:0.04),
-              ),
-              child: const Center(child: Icon(Icons.music_video_rounded, size: 40)),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _fakeTitleBand(scheme, small: true),
-        ],
-      ),
-    );
-  }
-
-  // Vinyl ultra preview: circular artwork + small ring
-  static Widget _previewVinyl(BuildContext ctx) {
-    final scheme = Theme.of(ctx).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(10),
-      color: scheme.surface,
-      child: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Container(
-                width: double.infinity,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(colors: [scheme.primary.withValues( alpha:0.08), Colors.transparent]),
-                ),
-                child: const Center(child: Icon(Icons.album_rounded, size: 48)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          _miniControlsRow(scheme, small: true),
+          const SizedBox(height: 12),
+          _fakeTitleBand(scheme),
         ],
       ),
     );
@@ -305,39 +218,6 @@ class PlayerStylesScreen extends StatelessWidget {
     );
   }
 
-  static Widget _fakeTinySeek(ColorScheme scheme) {
-    return Container(
-      height: 6,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: scheme.onSurfaceVariant.withValues( alpha:0.06),
-        borderRadius: BorderRadius.circular(6),
-      ),
-    );
-  }
-
-  static Widget _tinyReel(ColorScheme scheme) {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: scheme.surfaceContainerHighest.withValues( alpha:0.06),
-        border: Border.all(color: scheme.onSurfaceVariant.withValues( alpha:0.07)),
-      ),
-      child: Center(child: Icon(Icons.circle, size: 10, color: scheme.onSurfaceVariant)),
-    );
-  }
-
-  static Widget _miniPlayIcon(ColorScheme scheme) {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: scheme.primary),
-      child: Icon(Icons.play_arrow, color: scheme.onPrimary, size: 18),
-    );
-  }
-
   static Widget _placeholderIcon(ColorScheme scheme) {
     return Container(
       color: scheme.surfaceContainerHigh,
@@ -348,8 +228,14 @@ class PlayerStylesScreen extends StatelessWidget {
 
 // tiny helper entry type
 class _SkinEntry {
-  final int index;
+  final PlayerSkinType skin;
   final String name;
   final Widget Function(BuildContext) builder;
-  const _SkinEntry({required this.index, required this.name, required this.builder});
+
+  const _SkinEntry({
+    required this.skin,
+    required this.name,
+    required this.builder,
+  });
 }
+
