@@ -1,4 +1,3 @@
-// lib/ui/player/skin_preview.dart
 import 'package:flutter/material.dart';
 
 class SkinPreview extends StatelessWidget {

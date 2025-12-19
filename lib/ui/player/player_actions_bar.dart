@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../player/favorites_controller.dart';
-import '../../player/playlist_controller.dart';
+import '../../state/favorites/favorites_controller.dart';
+import '../../state/playlist/playlist_controller.dart';
 
 class PlayerActionsBar extends StatelessWidget {
   final int songId;

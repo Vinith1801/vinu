@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 
 class PlayerArtworkSurface extends StatefulWidget {
   final Widget artwork;
@@ -94,13 +94,13 @@ class _PlayerArtworkSurfaceState extends State<PlayerArtworkSurface>
         if (_dragOffset <= -_swipeThreshold) {
           // swipe left → next
           _animateTo(-MediaQuery.of(context).size.width, onComplete: () {
-            controller.next();
+            controller.playback.next();
             setState(() => _dragOffset = 0);
           });
         } else if (_dragOffset >= _swipeThreshold) {
           // swipe right → previous
           _animateTo(MediaQuery.of(context).size.width, onComplete: () {
-            controller.previous();
+            controller.playback.previous();
             setState(() => _dragOffset = 0);
           });
         } else {

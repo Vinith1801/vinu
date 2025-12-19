@@ -3,9 +3,9 @@ import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
 import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
 
-import '../../player/audio_player_controller.dart';
-import '../../player/favorites_controller.dart';
-import '../../player/library_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
+import '../../state/favorites/favorites_controller.dart';
+import '../../state/library/library_controller.dart';
 import '../shared/song_list_view.dart';
 
 class ArtistSongsScreen extends StatelessWidget {
@@ -67,7 +67,7 @@ class ArtistSongsScreen extends StatelessWidget {
                   child: SongListView(
                     songs: songs,
                     onPlay: (index) {
-                      audio.setPlaylist(songs, initialIndex: index);
+                      audio.queue.setPlaylist(songs, index: index);
                     },
                     isFavorite: fav.isFavorite,
                     onToggleFavorite: fav.toggleFavorite,

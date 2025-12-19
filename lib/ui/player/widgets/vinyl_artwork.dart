@@ -1,10 +1,9 @@
-// lib/ui/player/vinyl_artwork.dart
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:on_audio_query/on_audio_query.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 import 'package:vinu/ui/shared/artwork_loader.dart';
-import '../../../player/audio_player_controller.dart';
 
 class VinylArtwork extends StatefulWidget {
   final int songId;
@@ -36,7 +35,7 @@ class _VinylArtworkState extends State<VinylArtwork> with TickerProviderStateMix
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final isPlaying = context.watch<AudioPlayerController>().isPlaying;
+    final isPlaying = context.watch<AudioPlayerController>().playback.isPlaying;
     if (isPlaying) {
       if (!_rotateCtrl.isAnimating) _rotateCtrl.repeat();
       _tonearmCtrl.forward();

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/player/library_visibility_controller.dart';
+import 'package:vinu/state/library/library_visibility_controller.dart';
 import '../../library/folder_songs_screen.dart';
 
 class FoldersTab extends StatelessWidget {

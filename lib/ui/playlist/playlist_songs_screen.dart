@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 import 'package:vinu/ui/shared/song_sort_mode.dart';
 
-import '../../models/vinu_playlist.dart';
-import '../../player/audio_player_controller.dart';
-import '../../player/favorites_controller.dart';
-import '../../player/library_controller.dart';
-import '../../player/playlist_controller.dart';
+import '../../state/playlist/vinu_playlist.dart';
+import '../../state/favorites/favorites_controller.dart';
+import '../../state/library/library_controller.dart';
+import '../../state/playlist/playlist_controller.dart';
 import '../shared/song_list_view.dart';
 import '../shared/song_sorter.dart';
 import '../shared/song_toolbar.dart';
@@ -66,7 +66,7 @@ class _PlaylistSongsScreenState extends State<PlaylistSongsScreen> {
                   activeSort: sortMode,
                   onShuffle: () {
                     final shuffled = List<SongModel>.from(sorted)..shuffle();
-                    audio.setPlaylist(shuffled, initialIndex: 0);
+                    audio.queue.setPlaylist(shuffled, index: 0);
                   },
                   onSort: (m) => setState(() => sortMode = m),
                 ),
@@ -75,7 +75,7 @@ class _PlaylistSongsScreenState extends State<PlaylistSongsScreen> {
                   child: SongListView(
                     songs: sorted,
                     onPlay: (index) {
-                      audio.setPlaylist(sorted, initialIndex: index);
+                      audio.queue.setPlaylist(sorted, index: index);
                     },
                     isFavorite: fav.isFavorite,
                     onToggleFavorite: fav.toggleFavorite,

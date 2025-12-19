@@ -1,4 +1,3 @@
-// lib/ui/screens/home/tabs/albums_tab.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import '../../library/album_songs_screen.dart';

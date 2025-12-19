@@ -1,9 +1,8 @@
-// lib/ui/screens/home_screen.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../player/library_visibility_controller.dart';
-import '../../player/library_controller.dart';
+import '../../state/library/library_visibility_controller.dart';
+import '../../state/library/library_controller.dart';
 import '../shared/header.dart';
 
 // tabs

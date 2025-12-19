@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio_background/just_audio_background.dart';
-import 'package:vinu/ui/player/library_view_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
+import 'package:vinu/state/ui/library_layout_controller.dart';
 
-import 'player/audio_player_controller.dart';
-import 'player/favorites_controller.dart';
-import 'player/playlist_controller.dart';
-import 'player/library_controller.dart';
-import 'player/library_visibility_controller.dart';
+import 'state/favorites/favorites_controller.dart';
+import 'state/playlist/playlist_controller.dart';
+import 'state/library/library_controller.dart';
+import 'state/library/library_visibility_controller.dart';
 import 'ui/player/player_skin_controller.dart';
 import 'ui/theme/theme_controller.dart';
 
@@ -33,7 +33,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => LibraryVisibilityController()),
         ChangeNotifierProvider(create: (_) => LibraryController()..init()),
         ChangeNotifierProvider(create: (_) => PlayerSkinController()),
-        ChangeNotifierProvider(create: (_) => LibraryViewController()),
+        ChangeNotifierProvider(create: (_) => LibraryLayoutController()),
       ],
       child: const VinuMusicApp(),
     ),

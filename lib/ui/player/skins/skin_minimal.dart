@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/position_controller.dart';
 import '../widgets/seekbar.dart';
 import '../widgets/mini_artwork.dart';
 import '../player_controls.dart';
@@ -18,7 +18,7 @@ class SkinMinimal extends PlayerSkin {
 
   @override
   Widget build(BuildContext context) {
-    final song = controller.currentSong!;
+    final song = controller.queue.currentSong!;
     final scheme = Theme.of(context).colorScheme;
 
     final ValueNotifier<bool> showVolume = ValueNotifier(false);
@@ -99,7 +99,7 @@ class SkinMinimal extends PlayerSkin {
                         const SizedBox(height: 18),
 
                         StreamBuilder<PositionData>(
-                          stream: controller.smoothPositionStream,
+                          stream: controller.position.smooth,
                           builder: (_, snap) {
                             final pos =
                                 snap.data?.position ?? Duration.zero;
@@ -110,7 +110,7 @@ class SkinMinimal extends PlayerSkin {
                               child: SeekBar(
                                 position: pos,
                                 duration: dur,
-                                onChangeEnd: controller.seek,
+                                onChangeEnd: controller.playback.seek,
                               ),
                             );
                           },

@@ -1,4 +1,3 @@
-//lib/ui/widgets/header.dart
 import 'package:flutter/material.dart';
 import '../library/search_screen.dart';
 import '../settings/settings_screen.dart';

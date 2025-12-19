@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/ui/player/library_view_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
+import 'package:vinu/state/ui/library_layout_controller.dart';
 import 'package:vinu/ui/shared/song_grid_tile.dart';
 import 'package:vinu/ui/shared/song_sort_mode.dart';
 
-import '../../../player/audio_player_controller.dart';
-import '../../../player/favorites_controller.dart';
+import '../../../state/favorites/favorites_controller.dart';
 import '../../playlist/add_to_playlist_sheet.dart';
 import '../../shared/song_list_view.dart';
 import '../../shared/song_sorter.dart';
@@ -28,7 +28,7 @@ class _SongsTabState extends State<SongsTab> {
 Widget build(BuildContext context) {
   final audio = context.read<AudioPlayerController>();
   final fav = context.watch<FavoritesController>();
-  final view = context.watch<LibraryViewController>();
+  final view = context.watch<LibraryLayoutController>();
 
   final sortedSongs = SongSorter.sort(widget.songs, sortMode);
 
@@ -38,7 +38,7 @@ Widget build(BuildContext context) {
         activeSort: sortMode,
         onShuffle: () {
           final shuffled = List<SongModel>.from(sortedSongs)..shuffle();
-          audio.setPlaylist(shuffled, initialIndex: 0);
+          audio.queue.setPlaylist(shuffled, index: 0);
         },
         onSort: (mode) => setState(() => sortMode = mode),
       ),
@@ -48,7 +48,7 @@ Widget build(BuildContext context) {
             ? SongListView(
                 songs: sortedSongs,
                 onPlay: (index) {
-                  audio.setPlaylist(sortedSongs, initialIndex: index);
+                  audio.queue.setPlaylist(sortedSongs, index: index);
                 },
                 isFavorite: fav.isFavorite,
                 onToggleFavorite: fav.toggleFavorite,
@@ -74,7 +74,7 @@ class _SongsGridView extends StatelessWidget {
   Widget build(BuildContext context) {
     final audio = context.read<AudioPlayerController>();
     final fav = context.watch<FavoritesController>();
-    final view = context.watch<LibraryViewController>();
+    final view = context.watch<LibraryLayoutController>();
 
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -91,7 +91,7 @@ class _SongsGridView extends StatelessWidget {
           songId: song.id,
           title: song.title,
           isFavorite: fav.isFavorite(song.id),
-          onTap: () => audio.setPlaylist(songs, initialIndex: i),
+          onTap: () => audio.queue.setPlaylist(songs, index: i),
           onToggleFavorite: () => fav.toggleFavorite(song.id),
           onAddToPlaylist: () {
             AddToPlaylistSheet.show(context, song.id);

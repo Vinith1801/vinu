@@ -1,8 +1,7 @@
-// lib/ui/player/player_controls.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
-import '../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 
 class PlayerControls extends StatelessWidget {
   final AudioPlayerController controller;
@@ -26,8 +25,8 @@ class PlayerControls extends StatelessWidget {
         // ------------------------------------------
         Selector<AudioPlayerController, Map<String, dynamic>>(
           selector: (_, p) => {
-            "shuffle": p.isShuffling,
-            "repeat": p.loopMode,
+            "shuffle": p.playback.isShuffling,
+            "repeat": p.playback.loopMode,
           },
           builder: (_, data, __) {
             final shuffle = data["shuffle"] as bool;
@@ -53,14 +52,14 @@ class PlayerControls extends StatelessWidget {
               onTap: () {
                 // EXACT SAME STATE MACHINE YOU USED
                 if (!shuffle && repeat == LoopMode.off) {
-                  controller.toggleShuffle();
+                  controller.playback.toggleShuffle();
                 } else if (shuffle) {
-                  controller.toggleShuffle();
-                  if (controller.loopMode != LoopMode.all) controller.toggleRepeat();
+                  controller.playback.toggleShuffle();
+                  if (controller.playback.loopMode != LoopMode.all) controller.playback.toggleRepeat();
                 } else if (repeat == LoopMode.all) {
-                  controller.toggleRepeat();
+                  controller.playback.toggleRepeat();
                 } else if (repeat == LoopMode.one) {
-                  controller.toggleRepeat();
+                  controller.playback.toggleRepeat();
                 }
               },
               child: AnimatedContainer(
@@ -78,12 +77,12 @@ class PlayerControls extends StatelessWidget {
         IconButton(
           iconSize: 36,
           icon: Icon(Icons.skip_previous_rounded, color: scheme.onSurface),
-          onPressed: controller.previous,
+          onPressed: controller.playback.previous,
         ),
 
         // PLAY / PAUSE
         Selector<AudioPlayerController, bool>(
-          selector: (_, c) => c.isPlaying,
+          selector: (_, c) => c.playback.isPlaying,
           builder: (_, isPlaying, __) {
             return IconButton(
               iconSize: 80,
@@ -93,7 +92,7 @@ class PlayerControls extends StatelessWidget {
                     : Icons.play_circle_fill_rounded,
                 color: scheme.primary,
               ),
-              onPressed: controller.togglePlayPause,
+              onPressed: controller.playback.togglePlayPause,
             );
           },
         ),
@@ -102,7 +101,7 @@ class PlayerControls extends StatelessWidget {
         IconButton(
           iconSize: 36,
           icon: Icon(Icons.skip_next_rounded, color: scheme.onSurface),
-          onPressed: controller.next,
+          onPressed: controller.playback.next,
         ),
 
         const SizedBox(width: 16),

@@ -1,4 +1,3 @@
-// lib/ui/widgets/artwork_loader.dart
 import 'dart:typed_data';
 import 'dart:io';
 import 'dart:collection';

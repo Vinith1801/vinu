@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/ui/player/library_view_controller.dart';
+import 'package:vinu/state/ui/library_layout_controller.dart';
 import 'package:vinu/ui/shared/song_grid_tile.dart';
 
 import 'track_tile.dart';
@@ -28,7 +28,7 @@ class SongListView extends StatelessWidget {
   Widget build(BuildContext context) {
     if (songs.isEmpty) return const SizedBox.shrink();
 
-    final view = context.watch<LibraryViewController>();
+    final view = context.watch<LibraryLayoutController>();
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),

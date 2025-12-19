@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/player/favorites_controller.dart';
+import 'package:vinu/state/favorites/favorites_controller.dart';
 import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
-import '../../player/library_controller.dart';
-import '../../player/audio_player_controller.dart';
+import '../../state/library/library_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 import '../shared/track_tile.dart';
 import 'album_songs_screen.dart';
 import 'artist_songs_screen.dart';
@@ -102,9 +102,9 @@ class _SearchScreenState extends State<SearchScreen> {
                     artist: s.artist ?? "Unknown Artist",
                     songId: s.id,
                     isFavorite: fav.isFavorite(s.id),
-                    onTap: () => audio.setPlaylist(
+                    onTap: () => audio.queue.setPlaylist(
                       filteredSongs,
-                      initialIndex: filteredSongs.indexOf(s),
+                      index: filteredSongs.indexOf(s),
                     ),
                     onToggleFavorite: () => fav.toggleFavorite(s.id),
                     onAddToPlaylist: () => AddToPlaylistSheet.show(context, s.id),

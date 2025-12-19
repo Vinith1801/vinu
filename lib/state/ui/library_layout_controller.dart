@@ -1,17 +1,16 @@
-// lib/ui/player/library_view_controller.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum LibraryViewMode { list, grid }
 
-class LibraryViewController extends ChangeNotifier {
+class LibraryLayoutController extends ChangeNotifier {
   static const _kViewMode = 'library.viewMode';
   static const _kGridCount = 'library.gridCount';
 
   LibraryViewMode viewMode = LibraryViewMode.list;
   int gridCount = 2;
 
-  LibraryViewController() {
+  LibraryLayoutController() {
     _load();
   }
 

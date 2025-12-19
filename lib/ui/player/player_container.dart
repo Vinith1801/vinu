@@ -1,9 +1,8 @@
-// lib/ui/player/player_container.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'mini_player.dart';
 import 'full_player.dart';
-import '../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 
 class PlayerContainer extends StatefulWidget {
   const PlayerContainer({super.key});
@@ -35,8 +34,11 @@ class _PlayerContainerState extends State<PlayerContainer> {
 
   @override
   Widget build(BuildContext context) {
-    final currentSongId = context.select<AudioPlayerController, int?>((c) => c.currentSongId);
-    if (currentSongId == null) return const SizedBox.shrink();
+    final hasQueue = context.select<AudioPlayerController, bool>(
+      (c) => c.queue.playlist.isNotEmpty,
+    );
+
+    if (!hasQueue) return const SizedBox.shrink();
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,

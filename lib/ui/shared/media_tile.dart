@@ -1,4 +1,3 @@
-// lib/ui/widgets/media_tile.dart
 import 'package:flutter/material.dart';
 import 'artwork_loader.dart';
 

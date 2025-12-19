@@ -1,4 +1,3 @@
-// lib/ui/player/full_player.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:vinu/ui/player/player_skin_controller.dart';
@@ -6,7 +5,7 @@ import 'package:vinu/ui/player/skins/skin_classic.dart';
 import 'package:vinu/ui/player/skins/skin_minimal.dart';
 import 'package:vinu/ui/player/skins/skin_circular.dart';
 import 'package:vinu/ui/player/widgets/queue_bottom_sheet.dart';
-import '../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 
 class FullPlayer extends StatefulWidget {
   final VoidCallback onClose;

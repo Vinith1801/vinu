@@ -1,4 +1,3 @@
-// lib/models/vinu_playlist.dart
 class VinuPlaylist {
   String id;
   String name;

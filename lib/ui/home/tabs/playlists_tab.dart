@@ -1,8 +1,7 @@
-// lib/ui/screens/home/tabs/playlists_tab.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/models/vinu_playlist.dart';
-import 'package:vinu/player/playlist_controller.dart';
+import 'package:vinu/state/playlist/vinu_playlist.dart';
+import 'package:vinu/state/playlist/playlist_controller.dart';
 import '../../playlist/playlist_dialogs.dart';
 
 import '../../playlist/playlist_songs_screen.dart';

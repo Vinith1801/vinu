@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 
 abstract class PlayerSkin extends StatelessWidget {
   final AudioPlayerController controller;

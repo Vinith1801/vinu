@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../player/audio_player_controller.dart';
+import 'package:vinu/state/player/position_controller.dart';
 import '../widgets/seekbar.dart';
 import '../player_controls.dart';
 import '../widgets/vinyl_artwork.dart';
@@ -18,7 +18,7 @@ class SkinClassic extends PlayerSkin {
 
   @override
   Widget build(BuildContext context) {
-    final song = controller.currentSong!;
+    final song = controller.queue.currentSong!;
     final scheme = Theme.of(context).colorScheme;
 
     final ValueNotifier<bool> showVolume = ValueNotifier(false);
@@ -87,7 +87,7 @@ class SkinClassic extends PlayerSkin {
                       const SizedBox(height: 20),
 
                       StreamBuilder<PositionData>(
-                        stream: controller.smoothPositionStream,
+                        stream: controller.position.smooth,
                         builder: (_, snap) {
                           final pos =
                               snap.data?.position ?? Duration.zero;
@@ -99,7 +99,7 @@ class SkinClassic extends PlayerSkin {
                             child: SeekBar(
                               position: pos,
                               duration: dur,
-                              onChangeEnd: controller.seek,
+                              onChangeEnd: controller.playback.seek,
                             ),
                           );
                         },

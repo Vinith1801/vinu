@@ -1,8 +1,7 @@
-//lib/ui/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/player/library_visibility_controller.dart';
-import 'package:vinu/ui/player/library_view_controller.dart';
+import 'package:vinu/state/library/library_visibility_controller.dart';
+import 'package:vinu/state/ui/library_layout_controller.dart';
 import 'package:vinu/ui/shared/color_picker_dialog.dart';
 import '../theme/theme_controller.dart';
 import 'package:vinu/ui/player/styles/player_styles_screen.dart';
@@ -488,7 +487,7 @@ class _LibraryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final view = context.watch<LibraryViewController>();
+    final view = context.watch<LibraryLayoutController>();
 
     return _CardContainer(
       title: 'Library',

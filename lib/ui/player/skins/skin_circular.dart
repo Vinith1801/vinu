@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vinu/player/audio_player_controller.dart';
+import 'package:vinu/state/player/position_controller.dart';
 import 'package:vinu/ui/player/player_actions_bar.dart';
 import 'package:vinu/ui/player/player_controls.dart';
 import 'package:vinu/ui/player/skins/player_skin_base.dart';
@@ -18,7 +18,7 @@ class SkinCircular extends PlayerSkin {
 
   @override
   Widget build(BuildContext context) {
-    final song = controller.currentSong!;
+    final song = controller.queue.currentSong!;
     final scheme = Theme.of(context).colorScheme;
     final showVolume = ValueNotifier(false);
 
@@ -52,7 +52,7 @@ class SkinCircular extends PlayerSkin {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         StreamBuilder<PositionData>(
-                          stream: controller.smoothPositionStream,
+                          stream: controller.position.smooth,
                           builder: (_, snap) {
                             final pos =
                                 snap.data?.position ?? Duration.zero;
@@ -66,7 +66,7 @@ class SkinCircular extends PlayerSkin {
                                   size: 300,
                                   position: pos,
                                   duration: dur,
-                                  onSeek: controller.seek,
+                                  onSeek: controller.playback.seek,
                                 ),
 
                                 PlayerArtworkSurface(

@@ -1,4 +1,3 @@
-// lib/ui/player/mini_artwork.dart
 import 'package:flutter/material.dart';
 import 'package:on_audio_query/on_audio_query.dart';
 import 'package:vinu/ui/shared/artwork_loader.dart';

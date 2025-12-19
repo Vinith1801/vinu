@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/player/favorites_controller.dart';
+import 'package:vinu/state/favorites/favorites_controller.dart';
 import 'package:vinu/ui/playlist/add_to_playlist_sheet.dart';
 
-import '../../player/library_controller.dart';
-import '../../player/audio_player_controller.dart';
+import '../../state/library/library_controller.dart';
+import 'package:vinu/state/player/audio_player_controller.dart';
 import '../shared/track_tile.dart';
 
 class FolderSongsScreen extends StatelessWidget {
@@ -55,7 +55,7 @@ class FolderSongsScreen extends StatelessWidget {
                         ),
                       ),
                       onPressed: () {
-                        controller.setPlaylist(folderSongs, initialIndex: 0);
+                        controller.queue.setPlaylist(folderSongs, index: 0);
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -90,7 +90,7 @@ class FolderSongsScreen extends StatelessWidget {
                         artist: s.artist ?? "Unknown Artist",
                         songId: s.id,
                         isFavorite: fav.isFavorite(s.id),
-                        onTap: () => controller.setPlaylist(folderSongs, initialIndex: i),
+                        onTap: () => controller.queue.setPlaylist(folderSongs, index: i),
                         onToggleFavorite: () => fav.toggleFavorite(s.id),
                         onAddToPlaylist: () => AddToPlaylistSheet.show(context, s.id),
                       );

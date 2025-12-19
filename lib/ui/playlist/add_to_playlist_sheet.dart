@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:vinu/player/playlist_controller.dart';
+import 'package:vinu/state/playlist/playlist_controller.dart';
 
 class AddToPlaylistSheet {
   static void show(BuildContext ctx, int songId) {
