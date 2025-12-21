@@ -2,12 +2,14 @@ class VinuPlaylist {
   String id;
   String name;
   List<int> songIds;
+  int createdAt;
 
   VinuPlaylist({
     required this.id,
     required this.name,
     required this.songIds,
-  });
+    int? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now().millisecondsSinceEpoch;
 
   Map<String, dynamic> toJson() => {
         "id": id,

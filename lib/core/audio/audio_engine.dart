@@ -9,7 +9,8 @@ class AudioEngine {
     await session.configure(const AudioSessionConfiguration.music());
   }
 
-  Future<void> dispose() async {
+  Future<void> stopAndRelease() async {
+    await player.stop();
     await player.dispose();
   }
 }

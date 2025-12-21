@@ -6,16 +6,14 @@ import 'position_controller.dart';
 import 'artwork_controller.dart';
 
 class AudioPlayerController extends ChangeNotifier {
-  final AudioEngine engine = AudioEngine();
+  final AudioEngine engine;
 
   late final PlaybackController playback;
   late final QueueController queue;
   late final PositionController position;
   late final ArtworkController artwork;
 
-  AudioPlayerController() {
-    engine.init();
-
+  AudioPlayerController(this.engine) {
     artwork = ArtworkController();
     playback = PlaybackController(engine);
     queue = QueueController(engine, artwork);
@@ -29,9 +27,7 @@ class AudioPlayerController extends ChangeNotifier {
   void dispose() {
     playback.removeListener(notifyListeners);
     queue.removeListener(notifyListeners);
-
     position.dispose();
-    engine.dispose();
     super.dispose();
   }
 }

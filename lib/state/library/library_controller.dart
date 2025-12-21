@@ -131,8 +131,14 @@ class LibraryController extends ChangeNotifier {
     filteredAlbums = List<AlbumModel>.from(_allAlbums);
     filteredArtists = List<ArtistModel>.from(_allArtists);
 
-    // FIX: Always show all folders
-    filteredFolders = List<String>.from(_allFolders);
+    // Folders filtering
+    if (folderScanEnabled && enabledFolders.isNotEmpty) {
+      final allowed = Set<String>.from(enabledFolders);
+      filteredFolders =
+          _allFolders.where((f) => allowed.contains(f)).toList();
+    } else {
+      filteredFolders = List<String>.from(_allFolders);
+    }
 
     notifyListeners();
   }

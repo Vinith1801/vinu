@@ -25,13 +25,14 @@ class QueueController extends ChangeNotifier {
   SongModel? get currentSong =>
       playlist.isEmpty ? null : playlist[currentIndex];
 
-  Future<void> setPlaylist(List<SongModel> songs, {int index = 0}) async {
+  Future<void> setPlaylist(List<SongModel> songs,
+      {int index = 0}) async {
     playlist = List.from(songs);
     _idIndex
       ..clear()
       ..addEntries(
-        List.generate(songs.length,
-            (i) => MapEntry(songs[i].id, i)),
+        List.generate(
+            songs.length, (i) => MapEntry(songs[i].id, i)),
       );
 
     final sources = <AudioSource>[];
@@ -54,7 +55,7 @@ class QueueController extends ChangeNotifier {
 
     await engine.player.setAudioSources(
       sources,
-      initialIndex: index.clamp(0, playlist.length - 1),
+      initialIndex: index,
     );
 
     await engine.player.play();

@@ -60,7 +60,7 @@ class _ColorPickerDialogState extends State<ColorPickerDialog> {
             label: 'Brightness',
             value: _hsv.value,
             max: 1,
-            onChanged: (v) => setState(() => _hsv = _hsv.withValue(v)),
+            onChanged: (v) => setState(() => _hsv = _hsv.withValue(v.clamp(0.25, 0.95))),
           ),
         ],
       ),
